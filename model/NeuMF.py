@@ -5,6 +5,7 @@ from tensorflow.keras.layers import (
     Embedding,
     Flatten,
     Input,
+    Multiply,
 )
 from tensorflow.keras import Model
 from tensorflow.keras.regularizers import l2
@@ -79,12 +80,12 @@ class NeuMF:
         # MF vector
         mf_user_latent = Flatten()(mf_user_embedding(user))
         mf_item_latent = Flatten()(mf_item_embedding(item))
-        mf_cat_latent = Flatten()([mf_user_embedding, mf_item_embedding])
+        mf_cat_latent = Multiply()([mf_user_latent, mf_item_latent])
 
         # MLP vector
         mlp_user_latent = Flatten()(mlp_user_embedding(user))
         mlp_item_latent = Flatten()(mlp_item_embedding(item))
-        mlp_cat_latent = Flatten()([mlp_user_embedding, mlp_item_embedding])
+        mlp_cat_latent = Concatenate()([mlp_user_latent, mlp_item_latent])
 
         mlp_vector = mlp_cat_latent
 
