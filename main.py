@@ -1,5 +1,5 @@
-from PMF import PMF
-from load_data import load_data
+from model.PMF import PMF
+from utils.load_data import load_data
 import numpy as np
 
 __author__ = 'linhthi'

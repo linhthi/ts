@@ -25,6 +25,7 @@ python main.py
 | 0.05     |  16 | 1.06514 |0.82039|
 | 0.05     |  8 | 1.06159 |0.82062|
 | 0.01     |  8 | 1.06556 |0.82129|
+| 0.005     |  8 | 1.05626 |0.81623|
 
 ### Reference:  
 1. Mnih, A., & Salakhutdinov, R. (2007). Probabilistic matrix factorization. In Advances in neural information processing systems (pp. 1257-1264).  
