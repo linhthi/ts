@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import tensorflow as tf
+from typing import List
 
 __author__ = 'linhthi'
 
@@ -15,14 +17,13 @@ def load_data(file_path):
     df = pd.read_csv(file_path)
     df_values = df.values
 
-    n_users = np.max(df_values[:, 0])
-    n_items = np.max(df_values[:, 1])
+    n_users = np.max(df_values[:, 0]) + 1
+    n_items = np.max(df_values[:, 1]) + 1
 
     train, validate, test = np.split(df.sample(frac=1), [int(.6 * len(df)), int(.8 * len(df))])
     train, validate, test = train.values, validate.values, test.values
 
     return train, validate, test, n_users, n_items
-
 
 if __name__ == '__main__':
     load_data('data/rating.csv')
