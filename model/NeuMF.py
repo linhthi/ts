@@ -13,7 +13,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras import Model
 from tensorflow.keras.regularizers import l2
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.utils import to_categorical
 from typing import List
 
@@ -51,7 +51,7 @@ class NeuMF:
 
         # embedding layer
         mf_user_embedding = Embedding(
-            input_dim=self.number_of_items + 1,
+            input_dim=self.number_of_items,
             output_dim=self.latent_dim_mf,
             name="mf_user_embedding",
             embeddings_initializer="RandomNormal",
@@ -59,7 +59,7 @@ class NeuMF:
             input_length=1,
         )
         mf_item_embedding = Embedding(
-            input_dim=self.number_of_items + 1,
+            input_dim=self.number_of_items,
             output_dim=self.latent_dim_mf,
             name="mf_item_embedding",
             embeddings_initializer="RandomNormal",
@@ -67,7 +67,7 @@ class NeuMF:
             input_length=1,
         )
         mlp_user_embedding = Embedding(
-            input_dim=self.number_of_users + 1,
+            input_dim=self.number_of_users,
             output_dim=self.latent_dim_mlp,
             name="mlp_user_embedding",
             embeddings_initializer="RandomNormal",
@@ -75,7 +75,7 @@ class NeuMF:
             input_length=1,
         )
         mlp_item_embedding = Embedding(
-            input_dim=self.number_of_items + 1,
+            input_dim=self.number_of_items,
             output_dim=self.latent_dim_mlp,
             name="mlp_item_embedding",
             embeddings_initializer="RandomNormal",
@@ -106,7 +106,7 @@ class NeuMF:
             mlp_vector = layer(mlp_vector)
 
         predict_layer = Concatenate()([mf_cat_latent, mlp_vector])
-        result = Dense(6, activation="softmax", kernel_initializer="lecun_uniform", name="interaction")
+        result = Dense(6, activation="softmax", name="predict_rating")
         output = result(predict_layer)
 
         model = Model(
@@ -121,7 +121,7 @@ class NeuMF:
         neuMF_model = self.get_model()
 
         neuMF_model.compile(
-            optimizer=Adam(),
+            optimizer=SGD(lr=0.01),
             metrics=[
                 tf.keras.metrics.mae,
                 tf.keras.metrics.mean_squared_error,
@@ -131,28 +131,15 @@ class NeuMF:
         neuMF_model._name = "neural_matrix_factorization"
         neuMF_model.summary()
 
-        # ds_train = train
-        # user_train = ds_train[:, 1]
-        # item_train = ds_train[:, 2]
-        # rating_train = ds_train[:, 4]
         user_train, item_train, rating_train = [], [], []
         for data in train:
             user_train.append(data[0])
             item_train.append(data[1])
             rating_train.append(data[3])
-        print([np.array(user_train), np.array(item_train)])
-
         rating_train = to_categorical(rating_train, 6)
         # print(user_train.reshape())
         # print(ds_train.shape)
-        # print(item_train.shape)
-        # print(rating_train.shape)
 
-        # ds_valid = valid
-        # user_valid = ds_valid[:, 1]
-        # item_valid = ds_valid[:, 2]
-        # rating_valid = ds_valid[:, 4]
-        # rating_valid = to_categorical(rating_valid, 6)
         user_valid, item_valid, rating_valid = [], [], []
         for data in valid:
             user_valid.append(data[0])
@@ -163,7 +150,7 @@ class NeuMF:
         # define logs and callbacks
         logdir = os.path.join("logs", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
         tensorboard_callback = tf.keras.callbacks.TensorBoard(logdir, histogram_freq=1)
-        early_stopping_callback = tf.keras.callbacks.EarlyStopping(patience=5)
+        early_stopping_callback = tf.keras.callbacks.EarlyStopping(patience=6)
 
         train_hist = neuMF_model.fit(
             x=[np.array(user_train), np.array(item_train)],  # input
@@ -173,19 +160,18 @@ class NeuMF:
             callbacks=[tensorboard_callback, early_stopping_callback],
             verbose=1,
         )
+        neuMF_model.save("my_neuMF_h5_model.h5")
 
-        # ds_test = np.array(test)
-        # neuMF_predictions = neuMF_model.predict(ds_test)
-        # df_test['predictions'] = neuMF_predictions
-        # print(df_test.head())
-        # print("RMSE test %0.5f: ", root_mean_squared_error(df_test['rating'], df_test['predictions']))
+    def test(self, test):
+        neuMF_model = keras.models.load_model("my_neuMF_h4_model.h5")
         user_test, item_test, rating_test = [], [], []
         for data in valid:
             user_test.append(data[0])
             item_test.append(data[1])
             rating_test.append(data[3])
-        predictions = neuMF_model.predict_classes([np.array(user_test), np.array(item_test)])
-        print("RMSE test: ", root_mean_squared_error(np.array(rating_test), predictions))
+        rating_test = to_categorical(rating_test, 6)
+        predictions = neuMF_model.predict([np.array(user_test), np.array(item_test)])
+        print("RMSE test: ", root_mean_squared_error(np.array(rating_test), np.argmax(predictions, axis=1)))
 
 
 def root_mean_squared_error(targets, predictions):
