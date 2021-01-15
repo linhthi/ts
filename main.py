@@ -1,5 +1,5 @@
-from PMF import PMF
-from NeuMF import NeuMF
+from models.PMF import PMF
+from models.NeuMF import NeuMF
 from utils.load_data import load_data
 import numpy as np
 import argparse
