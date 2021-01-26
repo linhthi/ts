@@ -1,5 +1,5 @@
-from models.PMF import PMF
-from models.NeuMF import NeuMF
+from models.PMF.PMF import PMF
+from models.NeuMF.NeuMF import NeuMF
 from utils.load_data import load_data
 import numpy as np
 import argparse
@@ -21,7 +21,7 @@ if __name__ == '__main__':
         pmf = PMF()
         pmf.train(train, validate, n_users, n_items)
         pmf.test(test)
-        print(np.dot(U[1], V[2].T))
+        # print(np.dot(U[1], V[2].T))
 
     elif name_model == 'NeuMF':
         neuMF = NeuMF(number_of_users=n_users, number_of_items=n_items)
