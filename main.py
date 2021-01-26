@@ -10,12 +10,14 @@ __author__ = 'linhthi'
 def parse_agrs():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', nargs='?', default='')
+    parser.add_argument('--dataset', nargs='?', default='')
     return parser.parse_args()
 
 if __name__ == '__main__':
-    train, validate, test, n_users, n_items = load_data('data/ciao/rating.csv')
     args = parse_agrs()
     name_model = args.model
+    dataset = 'data/{}/rating.csv'.format(args.dataset)
+    train, validate, test, n_users, n_items = load_data(dataset)
     print(name_model)
     if name_model == 'PMF':
         pmf = PMF()
