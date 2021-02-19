@@ -117,14 +117,15 @@ class NeuMF:
         return model
 
     def train(self, train, valid):
-        N_EPOCHS = 100
+        N_EPOCHS = 1000
         neuMF_model = self.get_model()
 
         neuMF_model.compile(
-            optimizer=SGD(lr=0.01),
+            optimizer=SGD(lr=0.001),
+            loss = squared_error,
             metrics=[
                 tf.keras.metrics.mae,
-                tf.keras.metrics.mean_squared_error,
+                root_mean_squared_error,
             ]
         )
 
@@ -169,10 +170,17 @@ class NeuMF:
             user_test.append(data[0])
             item_test.append(data[1])
             rating_test.append(data[3])
-        rating_test = to_categorical(rating_test, 6)
+        # rating_test = to_categorical(rating_test, 6)
         predictions = neuMF_model.predict([np.array(user_test), np.array(item_test)])
+        #predictions = to_categorical(predictions, 6)
         print("RMSE test: ", root_mean_squared_error(np.array(rating_test), np.argmax(predictions, axis=1)))
 
 
 def root_mean_squared_error(targets, predictions):
-    return np.sqrt(np.mean((predictions - targets) ** 2))
+    return tf.sqrt(tf.reduce_mean((predictions - targets) ** 2))
+
+
+def squared_error(targets, predictions):
+    return tf.scalar_mul(0.5, (predictions - targets) ** 2)
+
+
