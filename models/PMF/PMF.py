@@ -28,7 +28,7 @@ class PMF(object):
         Fit model with training set and evaluate RMSE/MAE on vali set
         The model stopped training if the RMSE on validation set increased for 5 successive epochs
         :param train: training_set
-        :param vai: validation_set
+        :param vali: validation_set
         :param num_user: number of user
         :param num_item: number of item
         :return:
@@ -88,7 +88,7 @@ class PMF(object):
             predict_rating = np.dot(self.U[user], self.V[item].T) + self.mean_rating
             if predict_rating > 5:
                 predict_rating = 5
-            if (predict_rating < 1):
+            if predict_rating < 1:
                 predict_rating = 1
             tmp_rmse += np.square(predict_rating - real_rating)
             tmp_mae += np.abs(predict_rating - real_rating)

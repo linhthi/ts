@@ -3,3 +3,5 @@
 /__pycache__
 /logs
 *.pyc
+/.vscode
+*.h5

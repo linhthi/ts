@@ -26,10 +26,10 @@ class Social_Aggregator(nn.Module):
             tmp_adj = to_neighs[i]
             num_neighs = len(tmp_adj)
             # 
-            e_u = self.u2e.weight[list(tmp_adj)] # fast: user embedding 
-            #slow: item-space user latent factor (item aggregation)
-            #feature_neigbhors = self.features(torch.LongTensor(list(tmp_adj)).to(self.device))
-            #e_u = torch.t(feature_neigbhors)
+            e_u = self.u2e.weight[list(tmp_adj)]  # fast: user embedding
+            # slow: item-space user latent factor (item aggregation)
+            # feature_neigbhors = self.features(torch.LongTensor(list(tmp_adj)).to(self.device))
+            # e_u = torch.t(feature_neigbhors)
 
             u_rep = self.u2e.weight[nodes[i]]
 

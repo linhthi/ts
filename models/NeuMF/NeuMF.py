@@ -166,7 +166,7 @@ class NeuMF:
     def test(self, test):
         neuMF_model = keras.models.load_model("my_neuMF_h4_model.h5")
         user_test, item_test, rating_test = [], [], []
-        for data in valid:
+        for data in test:
             user_test.append(data[0])
             item_test.append(data[1])
             rating_test.append(data[3])

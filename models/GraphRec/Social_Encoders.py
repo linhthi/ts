@@ -12,7 +12,7 @@ class Social_Encoder(nn.Module):
         self.features = features
         self.social_adj_lists = social_adj_lists
         self.aggregator = aggregator
-        if base_model != None:
+        if base_model is not None:
             self.base_model = base_model
         self.embed_dim = embed_dim
         self.device = cuda

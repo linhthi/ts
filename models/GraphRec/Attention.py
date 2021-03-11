@@ -1,14 +1,12 @@
 import torch
 import torch.nn as nn
-from torch.nn import init
-import numpy as np
-import random
 import torch.nn.functional as F
 
 
 class Attention(nn.Module):
     def __init__(self, embedding_dims):
         super(Attention, self).__init__()
+
         self.embed_dim = embedding_dims
         self.bilinear = nn.Bilinear(self.embed_dim, self.embed_dim, 1)
         self.att1 = nn.Linear(self.embed_dim * 2, self.embed_dim)
