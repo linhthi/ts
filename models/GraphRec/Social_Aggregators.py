@@ -1,9 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
-import numpy as np
-import random
-from Attention import Attention
+from models.GraphRec.Attention import Attention
 
 
 class Social_Aggregator(nn.Module):

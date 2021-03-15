@@ -1,10 +1,7 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 import torch.nn.functional as F
-import numpy as np
-import random
-from Attention import Attention
+from models.GraphRec.Attention import Attention
 
 
 class UV_Aggregator(nn.Module):
@@ -33,7 +30,7 @@ class UV_Aggregator(nn.Module):
             num_histroy_item = len(history)
             tmp_label = history_r[i]
 
-            if self.uv == True:
+            if self.uv:
                 # user component
                 e_uv = self.v2e.weight[history]
                 uv_rep = self.u2e.weight[nodes[i]]
