@@ -5,9 +5,24 @@ dataset in the `<https://www.cse.msu.edu/~tangjili/datasetcode/truststudy.htm>`
 
 ### Train model
 run script below, params are default you can change on main.py to setup model for explore model:
+
+#### PMF/NeuMF
 ```
-python main.py --model=<name_model>
+python main.py --model=<name_model> --dataset=<datasetname>
+example:
+python main.py --model=PMF --dataset=ciao
 ```
+
+#### GraphREC
+```
+python main_graphrec.py --data=data/ciao
+```
+
+#### GTN
+```
+python main_gtn --dataset=ciao
+```
+
 
 ### Result
 We use 60/20/20 for training, validation, test set
