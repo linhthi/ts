@@ -5,7 +5,7 @@ import networkx as nx
 __author__ = 'linhthi'
 
 
-def split_rating_data(file_path):
+def split_rating_data(dataset):
     """
     Load rating_data from file csv, rating.csv includes user_id, product_id, category_id, rating, helpfulness
     and then split it to train, valid and test set.
@@ -14,6 +14,7 @@ def split_rating_data(file_path):
     :return: train, vali, test set, number of users and number of item
     :rtype:
     """
+    file_path = f'data/{dataset}/rating.csv'
     df = pd.read_csv(file_path)
     df_values = df.values
 
@@ -26,12 +27,13 @@ def split_rating_data(file_path):
     return train, validate, test, n_users, n_items
 
 
-def load_trust_network(file_path):
+def load_trust_network(dataset):
     """
     Load trust network data from file csv
     @param file_path: example: 'data/ciao/trustnetwork.csv'
     return:
     """
+    file_path = f'data/{dataset}/trustnetwork.csv'
     return pd.read_csv(file_path).values
 
 
@@ -45,8 +47,8 @@ def gen_graph(rating_data, trust_data, n_users):
 
     for data in rating_data:
         G.add_node(data[0], id=data[0], label='user')
-        G.add_node(data[1] + n_users, id=data[1]+n_users, label='item')
-        G.add_edge(data[0], data[1] + n_users, rating=data[2])
+        G.add_node(data[1] + n_users, id=data[1] + n_users, label='item')
+        G.add_edge(data[0], data[1] + n_users, rating=data[3])
 
     for data in trust_data:
         G.add_edge(data[0], data[1])

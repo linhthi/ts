@@ -17,7 +17,7 @@ def parse_agrs():
 if __name__ == '__main__':
     args = parse_agrs()
     name_model = args.model
-    dataset = 'data/{}/rating.csv'.format(args.dataset)
+    dataset = args.dataset
     train, validate, test, n_users, n_items = utils.split_rating_data(dataset)
     print(name_model)
     if name_model == 'PMF':
