@@ -138,6 +138,7 @@ def main():
     # features: item * rating
     agg_u_history = UV_Aggregator(v2e, r2e, u2e, embed_dim, cuda=device, uv=True)
     enc_u_history = UV_Encoder(u2e, embed_dim, history_u_lists, history_ur_lists, agg_u_history, cuda=device, uv=True)
+    
     # neighobrs
     agg_u_social = Social_Aggregator(lambda nodes: enc_u_history(nodes).t(), u2e, embed_dim, cuda=device)
     enc_u = Social_Encoder(lambda nodes: enc_u_history(nodes).t(), embed_dim, social_adj_lists, agg_u_social,
@@ -159,9 +160,9 @@ def main():
 
         train(graphrec, device, train_loader, optimizer, epoch, best_rmse, best_mae)
         expected_rmse, mae = test(graphrec, device, test_loader)
-        # please add the validation set to tune the hyper-parameters based on your datasets.
+        # add the validation set to tune the hyper-parameters based on your datasets.
 
-        # early stopping (no validation set in toy dataset)
+        # early stopping
         if best_rmse > expected_rmse:
             best_rmse = expected_rmse
             best_mae = mae
