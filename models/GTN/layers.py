@@ -190,7 +190,7 @@ class GraphConvolution(nn.Module):
 
     def forward(self, input, adj):
         support = torch.mm(input, self.weight)
-        output = torch.spmm(adj, support)
+        output = torch.sparse.mm(adj, support)
 
         if self.bias is not None:
             return output + self.bias

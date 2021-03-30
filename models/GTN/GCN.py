@@ -7,6 +7,7 @@ class GCN(nn.Module):
     """
     Simple Graph Convolutional Networks for Node Embedding with 2 Graph Convolution layers
     """
+
     def __init__(self, in_dim, hidden_dim, out_dim, dropout):
         """
 
