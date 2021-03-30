@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 import torch
+import scipy.sparse as sp
 
 __author__ = 'linh_thi'
 
@@ -53,7 +54,7 @@ def gen_graph(rating_data, trust_data, users, items):
         G.add_node(user, id=user, label='user')
 
     for item in items:
-        G.add_node(item[0] + n_users, id=item[0] + n_users, label='item', category=item[1])
+        G.add_node(item + n_users, id=item + n_users, label='item')
 
     for data in rating_data:
         G.add_edge(data[0], data[1] + n_users, rating=data[3])
@@ -72,8 +73,9 @@ def get_nodes(dataset):
     file_path = f'data/{dataset}/rating.csv'
     df = pd.read_csv(file_path)
     users = df['user_id'].unique()
-    items = df[['item_id', 'category_id']].drop_duplicates()
-    items = items.values
+    # items = df[['item_id', 'category_id']].drop_duplicates()
+    # items = items.values
+    items = df['item_id'].unique()
     return users, items
 
 
@@ -93,6 +95,29 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
 def get_adjacency(G):
     return nx.to_scipy_sparse_matrix(G)
 
+
+def get_adj(adj):
+    """
+    build symmetric adjacency matrix
+    @param adj:
+    @return:
+    """
+    adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)
+    adj = normalize(adj + sp.eye(adj.shape[0]))
+    adj = sparse_mx_to_torch_sparse_tensor(adj)
+    return adj
+
+
+def normalize(mx):
+    """Row-normalize sparse matrix"""
+    rowsum = np.array(mx.sum(1))
+    r_inv = np.power(rowsum, -1).flatten()
+    r_inv[np.isinf(r_inv)] = 0.
+    r_mat_inv = sp.diags(r_inv)
+    mx = r_mat_inv.dot(mx)
+    return mx
+
+
 # Test
 if __name__ == '__main__':
     training, vali, test, n_users, n_items = split_rating_data('ciao')
@@ -100,4 +125,17 @@ if __name__ == '__main__':
     u, v = get_nodes('ciao')
     G = gen_graph(training, trust_data, u, v)
     A = nx.to_scipy_sparse_matrix(G)
-    print(A)
+    nodes = G.nodes.data()
+    features = []
+    for node in nodes:
+        label = node[1].get('label')
+        category = 0
+        label_enc = 1
+        if label == 'item':
+            label_enc = 2
+            category = node[1].get('category')
+        features.append([label_enc, category])
+    features = torch.tensor(features)
+    a = torch.LongTensor([[1, 2], [2, 3], [4, 5]])
+    idx1 = torch.LongTensor([1])
+    print(a[:, idx1])
