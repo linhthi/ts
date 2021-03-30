@@ -3,3 +3,4 @@ pandas~=1.1.2
 tensorflow~=2.3.0
 torch==1.7.0
 torch_geometric==1.6.1
+networkx~=2.5
