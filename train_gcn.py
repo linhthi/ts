@@ -59,7 +59,7 @@ for node in nodes:
     if label == 'item':
         label_enc = 2
         # category = node[1].get('category')
-    features.append([node[0], label_enc])
+    features.append([label_enc, label_enc])
 
 features = torch.FloatTensor(features)
 
