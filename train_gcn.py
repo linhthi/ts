@@ -12,6 +12,7 @@ import torch.optim as optim
 from models.GTN.GCN import GCN
 import utils.utils as utils
 from torch.utils.tensorboard import SummaryWriter
+
 writer = SummaryWriter()
 
 # Training setting
@@ -60,7 +61,7 @@ for node in nodes:
     if label == 'item':
         label_enc = 2
         # category = node[1].get('category')
-    features.append([label_enc, label_enc])
+    features.append([node[0], label_enc])
 
 features = torch.FloatTensor(features)
 features = torch.FloatTensor(utils.normalize(features))
@@ -99,20 +100,20 @@ model = GCN(in_dim=features.shape[1],
             out_dim=1,
             dropout=args.dropout)
 print(model.__repr__())
-optimizer = optim.Adam(model.parameters(),
-                       lr=args.lr, weight_decay=args.weight_decay)
+optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 criterion = nn.MSELoss()
 
-if args.cuda:
-    model.cuda()
-    features = features.cuda()
-    adj = adj.cuda()
-    # targets_train = targets_train.cuda()
-    # targets_val = targets_val.cuda()
-    # targets_test = targets_test.cuda()
-    # idx_train = idx_train.cuda()
-    # idx_val = idx_val.cuda()
-    # idx_test = idx_test.cuda()
+
+# if args.cuda:
+#     model.cuda()
+#     features = features.cuda()
+#     adj = adj.cuda()
+# targets_train = targets_train.cuda()
+# targets_val = targets_val.cuda()
+# targets_test = targets_test.cuda()
+# idx_train = idx_train.cuda()
+# idx_val = idx_val.cuda()
+# idx_test = idx_test.cuda()
 
 
 def train(epoch):
@@ -124,7 +125,7 @@ def train(epoch):
     for data in train_set:
         if data[0] < len(u) and data[1] < len(v):
             y_pred = output[data[0]] + output[data[1] + len(u)]
-            loss_train += F.mse_loss(y_pred, torch.FloatTensor(output[data[3]]))
+            loss_train += F.mse_loss(y_pred, torch.FloatTensor([data[3]]))
     # TODO: calculate mae, rmse metric
     rmse_train = torch.sqrt(loss_train)
     loss_train.backward()
@@ -140,7 +141,7 @@ def train(epoch):
     for data in val_set:
         if data[0] < len(u) and data[1] < len(v):
             y_pred = output[data[0]] + output[data[1] + len(u)]
-            loss_val += F.mse_loss(y_pred, torch.FloatTensor(output[data[3]]))
+            loss_val += F.mse_loss(y_pred, torch.FloatTensor([data[3]]))
     # TODO: calculate mae, rmse metric
     rmse_val = torch.sqrt(loss_val)
     writer.add_scalar('Loss_train', loss_train, epoch)
@@ -162,7 +163,8 @@ def test():
     for data in test_set:
         if data[0] < len(u) and data[1] < len(v):
             y_pred = output[data[0]] + output[data[1] + len(u)]
-            loss_test += F.mse_loss(y_pred, torch.FloatTensor(output[data[3]]))
+            print(y_pred, output[[3]])
+            loss_test += F.mse_loss(y_pred, torch.FloatTensor([data[3]]))
             # loss.backward(retain_graph=True)
     # TODO: calculate mae, rmse metric
     rmse_test = torch.sqrt(loss_test)
@@ -172,10 +174,12 @@ def test():
 
 
 def RMSELoss(yhat, y):
-    return torch.sqrt(torch.mean((yhat-y)**2))
+    return torch.sqrt(torch.mean((yhat - y) ** 2))
+
 
 # Train model
 t_total = time.time()
+best_rmse = 9999.0
 for epoch in range(args.epochs):
     train(epoch)
 writer.flush()
