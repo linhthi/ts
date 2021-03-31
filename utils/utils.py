@@ -125,17 +125,6 @@ if __name__ == '__main__':
     u, v = get_nodes('ciao')
     G = gen_graph(training, trust_data, u, v)
     A = nx.to_scipy_sparse_matrix(G)
-    nodes = G.nodes.data()
-    features = []
-    for node in nodes:
-        label = node[1].get('label')
-        category = 0
-        label_enc = 1
-        if label == 'item':
-            label_enc = 2
-            category = node[1].get('category')
-        features.append([label_enc, category])
-    features = torch.tensor(features)
     a = torch.LongTensor([[1, 2], [2, 3], [4, 5]])
     idx1 = torch.LongTensor([1])
-    print(a[:, idx1])
+    print(a[0])
