@@ -119,15 +119,15 @@ def train(epoch):
     optimizer.zero_grad()
     output = model(features, adj)
     # print(output)
-    loss = 0
-    for data_train in training:
-        if data_train[0] < len(u) and data_train[1] < len(v):
-            y_pred = output[data_train[0]] + output[data_train[1] + len(u)]
-            loss += F.mse_loss(y_pred, torch.FloatTensor(output[data_train[3]]))
+    loss_train = 0
+    for data in training:
+        if data[0] < len(u) and data[1] < len(v):
+            y_pred = output[data[0]] + output[data[1] + len(u)]
+            loss_train += F.mse_loss(y_pred, torch.FloatTensor(output[data[3]]))
             # loss.backward(retain_graph=True)
     # TODO: calculate mae, rmse metric
-    mae_train = torch.sqrt(loss)
-    loss.backward()
+    rmse_train = torch.sqrt(loss_train)
+    loss_train.backward()
     optimizer.step()
 
     if not args.fastmode:
@@ -137,30 +137,34 @@ def train(epoch):
         output = model(features, adj)
 
     loss_val = 0
-    for data_train in val:
-        if data_train[0] < len(u) and data_train[1] < len(v):
-            y_pred = output[data_train[0]] + output[data_train[1] + len(u)]
-            loss_val += F.mse_loss(y_pred, torch.FloatTensor(output[data_train[3]]))
+    for data in val:
+        if data[0] < len(u) and data[1] < len(v):
+            y_pred = output[data[0]] + output[data[1] + len(u)]
+            loss_val += F.mse_loss(y_pred, torch.FloatTensor(output[data[3]]))
     # TODO: calculate mae, rmse metric
-    mae_val = torch.sqrt(loss)
+    rmse_val = torch.sqrt(loss_val)
     print('Epoch: {:04d}'.format(epoch + 1),
-          'loss_train: {:.4f}'.format(loss),
+          'loss_train: {:.4f}'.format(loss_train),
           'loss_val: {:.4f}'.format(loss_val),
-          'mae_val: {:.4f}'.format(mae_val),
+          'rmse_train: {:.4f}'.format(rmse_train),
+          'rmse_val: {:.4f}'.format(rmse_val),
           'time: {:.4f}s'.format(time.time() - t))
 
 
 def test():
     model.eval()
     output = model(features, adj)
-    predict = output[idx_test[:, idx1]] + output[idx_test[:, idx2]]
-    print(predict.shape)
-    loss_test = F.nll_loss(predict, targets_test)
+    loss_test = 0
+    for data in test:
+        if data[0] < len(u) and data[1] < len(v):
+            y_pred = output[data[0]] + output[data[1] + len(u)]
+            loss_test += F.mse_loss(y_pred, torch.FloatTensor(output[data[3]]))
+            # loss.backward(retain_graph=True)
     # TODO: calculate mae, rmse metric
-    mae_test = mean_absolute_error(predict, targets_test)
+    rmse_test = torch.sqrt(loss_test)
     print("Test set results:",
-          "loss= {:.4f}".format(loss_test.item()),
-          'mae_test= {:.4f}'.format(mae_test.item()),)
+          "loss= {:.4f}".format(loss_test),
+          'rmse_test= {:.4f}'.format(rmse_test))
 
 
 def RMSELoss(yhat, y):
