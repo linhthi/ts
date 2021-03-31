@@ -62,6 +62,7 @@ for node in nodes:
     features.append([label_enc, label_enc])
 
 features = torch.FloatTensor(features)
+features = utils.normalize(features)
 
 print(len(features), n_users, n_items, len(u), len(v))
 targets_train, targets_val, targets_test = [], [], []
