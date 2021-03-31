@@ -5,3 +5,4 @@
 *.pyc
 /.vscode
 *.h5
+/runs

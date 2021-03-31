@@ -11,7 +11,8 @@ import torch.optim as optim
 
 from models.GTN.GCN import GCN
 import utils.utils as utils
-from sklearn.metrics import mean_absolute_error
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
 
 # Training setting
 parser = argparse.ArgumentParser()
@@ -42,10 +43,10 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # TODO: Load data
-training, val, test, n_users, n_items = utils.split_rating_data(args.dataset)
+train_set, val_set, test_set, n_users, n_items = utils.split_rating_data(args.dataset)
 trust_data = utils.load_trust_network(args.dataset)
 u, v = utils.get_nodes(args.dataset)
-G = utils.gen_graph(training, trust_data, u, v)
+G = utils.gen_graph(train_set, trust_data, u, v)
 adj = utils.get_adjacency(G)
 adj = utils.get_adj(adj)
 nodes = G.nodes.data()
@@ -62,24 +63,25 @@ for node in nodes:
     features.append([label_enc, label_enc])
 
 features = torch.FloatTensor(features)
-features = utils.normalize(features)
+features = torch.FloatTensor(utils.normalize(features))
 
 print(len(features), n_users, n_items, len(u), len(v))
-targets_train, targets_val, targets_test = [], [], []
-idx_train, idx_val, idx_test = [], [], []
-
-for data in training:
-    if data[0] < len(u) and data[1] < len(v):
-        idx_train.append([data[0], data[1] + len(u)])
-        targets_train.append([data[3]])
-for data in val:
-    if data[0] < len(u) and data[1] < len(v):
-        idx_val.append([data[0], data[1] + len(u)])
-        targets_val.append([data[3]])
-for data in test:
-    if data[0] < len(u) and data[1] < len(v):
-        idx_test.append(([data[0], data[1] + len(u)]))
-        targets_test.append([data[3]])
+# Make index for GPU train
+# targets_train, targets_val, targets_test = [], [], []
+# idx_train, idx_val, idx_test = [], [], []
+#
+# for data in train_set:
+#     if data[0] < len(u) and data[1] < len(v):
+#         idx_train.append([data[0], data[1] + len(u)])
+#         targets_train.append([data[3]])
+# for data in val_set:
+#     if data[0] < len(u) and data[1] < len(v):
+#         idx_val.append([data[0], data[1] + len(u)])
+#         targets_val.append([data[3]])
+# for data in test_set:
+#     if data[0] < len(u) and data[1] < len(v):
+#         idx_test.append(([data[0], data[1] + len(u)]))
+#         targets_test.append([data[3]])
 
 # targets_train = torch.LongTensor(targets_train)
 # targets_val = torch.LongTensor(targets_val)
@@ -118,13 +120,11 @@ def train(epoch):
     model.train()
     optimizer.zero_grad()
     output = model(features, adj)
-    # print(output)
     loss_train = 0
-    for data in training:
+    for data in train_set:
         if data[0] < len(u) and data[1] < len(v):
             y_pred = output[data[0]] + output[data[1] + len(u)]
             loss_train += F.mse_loss(y_pred, torch.FloatTensor(output[data[3]]))
-            # loss.backward(retain_graph=True)
     # TODO: calculate mae, rmse metric
     rmse_train = torch.sqrt(loss_train)
     loss_train.backward()
@@ -137,12 +137,16 @@ def train(epoch):
         output = model(features, adj)
 
     loss_val = 0
-    for data in val:
+    for data in val_set:
         if data[0] < len(u) and data[1] < len(v):
             y_pred = output[data[0]] + output[data[1] + len(u)]
             loss_val += F.mse_loss(y_pred, torch.FloatTensor(output[data[3]]))
     # TODO: calculate mae, rmse metric
     rmse_val = torch.sqrt(loss_val)
+    writer.add_scalar('Loss_train', loss_train, epoch)
+    writer.add_scalar('rmse_train', rmse_train, epoch)
+    writer.add_scalar('Loss_val', loss_val, epoch)
+    writer.add_scalar('rmse_val', rmse_val, epoch)
     print('Epoch: {:04d}'.format(epoch + 1),
           'loss_train: {:.4f}'.format(loss_train),
           'loss_val: {:.4f}'.format(loss_val),
@@ -155,7 +159,7 @@ def test():
     model.eval()
     output = model(features, adj)
     loss_test = 0
-    for data in test:
+    for data in test_set:
         if data[0] < len(u) and data[1] < len(v):
             y_pred = output[data[0]] + output[data[1] + len(u)]
             loss_test += F.mse_loss(y_pred, torch.FloatTensor(output[data[3]]))
@@ -174,6 +178,8 @@ def RMSELoss(yhat, y):
 t_total = time.time()
 for epoch in range(args.epochs):
     train(epoch)
+writer.flush()
+writer.close()
 print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
