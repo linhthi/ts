@@ -122,10 +122,10 @@ class NeuMF:
 
         neuMF_model.compile(
             optimizer=SGD(lr=0.001),
-            loss = squared_error,
+            loss = tf.keras.losses.MSE,
             metrics=[
                 tf.keras.metrics.mae,
-                root_mean_squared_error,
+                tf.keras.metrics.RootMeanSquaredError(),
             ]
         )
 
@@ -169,14 +169,11 @@ class NeuMF:
             item_test.append(data[1])
             rating_test.append(data[3])
         predictions = neuMF_model.predict([np.array(user_test), np.array(item_test)])
-        print("RMSE test: ", root_mean_squared_error(np.array(rating_test).astype(float), predictions))
+        rmse_test = np.sqrt(keras.losses.MSE(np.array(rating_test).astype(float), predictions))
+        mae_test = keras.metrics.mean_absolute_error(np.array(rating_test).astype(float), predictions)
+        print("RMSE test: %0.4f, MAE test: %0.4f" % (rmse_test, mae_test))
 
 
-def root_mean_squared_error(targets, predictions):
-    return tf.sqrt(tf.reduce_mean((predictions - targets) ** 2))
 
-
-def squared_error(targets, predictions):
-    return tf.scalar_mul(0.5, (predictions - targets) ** 2)
 
 

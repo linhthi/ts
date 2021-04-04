@@ -11,7 +11,7 @@ def parse_agrs():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', nargs='?', default='PMF')
     parser.add_argument('--dataset', nargs='?', default='ciao')
-    parser.add_argument('--epochs', nargs='?', default=50)
+    parser.add_argument('--epochs', nargs='?', default=50, type=int)
     return parser.parse_args()
 
 
