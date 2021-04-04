@@ -106,7 +106,7 @@ class NeuMF:
             mlp_vector = layer(mlp_vector)
 
         predict_layer = Concatenate()([mf_cat_latent, mlp_vector])
-        result = Dense(6, activation="softmax", name="predict_rating")
+        result = Dense(1, name="predict_rating")
         output = result(predict_layer)
 
         model = Model(
@@ -116,8 +116,8 @@ class NeuMF:
 
         return model
 
-    def train(self, train, valid):
-        N_EPOCHS = 1000
+    def train(self, train, valid, n_epochs):
+        N_EPOCHS = n_epochs
         neuMF_model = self.get_model()
 
         neuMF_model.compile(
@@ -137,7 +137,6 @@ class NeuMF:
             user_train.append(data[0])
             item_train.append(data[1])
             rating_train.append(data[3])
-        rating_train = to_categorical(rating_train, 6)
         # print(user_train.reshape())
         # print(ds_train.shape)
 
@@ -146,7 +145,6 @@ class NeuMF:
             user_valid.append(data[0])
             item_valid.append(data[1])
             rating_valid.append(data[3])
-        rating_valid = to_categorical(rating_valid, 6)
 
         # define logs and callbacks
         logdir = os.path.join("logs", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
@@ -155,8 +153,8 @@ class NeuMF:
 
         train_hist = neuMF_model.fit(
             x=[np.array(user_train), np.array(item_train)],  # input
-            y = np.array(rating_train),  # label rating
-            validation_data=([np.array(user_valid), np.array(item_valid)], np.array(rating_valid)),
+            y = np.array(rating_train).astype(float),  # label rating
+            validation_data=([np.array(user_valid), np.array(item_valid)], np.array(rating_valid).astype(float)),
             epochs=N_EPOCHS,
             callbacks=[tensorboard_callback, early_stopping_callback],
             verbose=1,
@@ -164,16 +162,14 @@ class NeuMF:
         neuMF_model.save("my_neuMF_h5_model.h5")
 
     def test(self, test):
-        neuMF_model = keras.models.load_model("my_neuMF_h4_model.h5")
+        neuMF_model = keras.models.load_model("my_neuMF_h5_model.h5")
         user_test, item_test, rating_test = [], [], []
         for data in test:
             user_test.append(data[0])
             item_test.append(data[1])
             rating_test.append(data[3])
-        # rating_test = to_categorical(rating_test, 6)
         predictions = neuMF_model.predict([np.array(user_test), np.array(item_test)])
-        #predictions = to_categorical(predictions, 6)
-        print("RMSE test: ", root_mean_squared_error(np.array(rating_test), np.argmax(predictions, axis=1)))
+        print("RMSE test: ", root_mean_squared_error(np.array(rating_test).astype(float), predictions))
 
 
 def root_mean_squared_error(targets, predictions):

@@ -23,7 +23,7 @@ class PMF(object):
         self.U = None
         self.V = None
 
-    def train(self, train, vali, num_user, num_item):
+    def train(self, train, vali, num_user, num_item, n_epochs):
         """
         Fit model with training set and evaluate RMSE/MAE on vali set
         The model stopped training if the RMSE on validation set increased for 5 successive epochs
@@ -40,7 +40,7 @@ class PMF(object):
         epoch = 0
         R_max = 5
         self.mean_rating = np.mean(train[:, 3])
-        while endure_count < 5:
+        while endure_count < 5 and epoch < n_epochs:
             loss = 0.0
             for data in train:
                 user = data[0]
