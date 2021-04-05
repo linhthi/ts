@@ -42,55 +42,52 @@ def get_args():
     return args
 
 
-def train(epoch, fastmode, train_features, train_set, n_users, n_nodes):
+def train(epoch, fastmode, features, train_set, n_users, n_nodes):
     t = time.time()
     model.train()
     optimizer.zero_grad()
     count = 0
     for batch in train_set:
         idx_batch = utils.get_idx(batch.numpy(), n_users, n_nodes)
-        try:
-            batch_features = train_features[idx_batch]
-            adj_indices = batch[:, 0:2]
-            adj_values = [1 for i in range(batch.shape[0])]
-            adj_batch = torch.sparse_coo_tensor(adj_indices, adj_values, (idx_batch.shape[0], idx_batch.shape[0]))
-            
-            score = model(batch_features, adj_batch, batch[:, 0:1], batch[:, 1:2])
-            loss_train = criterion(score, batch[:, 3:4])
-            count += 1
-            # TODO: calculate mae, rmse metric
-            rmse_train = torch.sqrt(loss_train)
-            loss_train.backward()
-            optimizer.step()
-            print("Epoch %d/%d: loss_train: %0.4f, rmse_train: %0.4f" %(cout, epoch, loss_train, rmse_train))
-        except:
-            continue
-
+        
+        batch_features = features[idx_batch]
+        adj_indices = batch[:, 0:2]
+        adj_values = [1 for i in range(batch.shape[0])]
+        adj_batch = torch.sparse_coo_tensor(adj_indices, adj_values, (idx_batch.shape[0], idx_batch.shape[0]))
+        # TODO: get adjency matrix from batch nodes (also have user-relation)
+        
+        score = model(batch_features, adj_batch, batch[:, 0:1], batch[:, 1:2])
+        loss_train = criterion(score, batch[:, 3:4])
+        count += 1
+        # TODO: calculate mae metric
+        rmse_train = torch.sqrt(loss_train)
+        loss_train.backward()
+        optimizer.step()
+        print("Epoch %d/%d: loss_train: %0.4f, rmse_train: %0.4f" %(count, epoch, loss_train, rmse_train))
+       
     if not fastmode:
         # Evaluate validation set performance separately,
         # deactivates dropout during validation run.
         model.eval()
         adj_val_indices = val_set[:, 0:2]
         adj_val_values = [1 for i in range(val_set.shape[0])]
-        adj_val = torch.sparse_coo_tensor(adj_val_indices, adj_val_values, (len(val_set), len(val_set)))    
+        adj_val = torch.sparse_coo_tensor(adj_val_indices, adj_val_values, (n_nodes, n_nodes))
         score = model(val_features, adj_val, val_set[:, 0:1], val_set[:, 1:2])
 
     loss_val = criterion(score, val_set[:, 3:4])
     rmse_val = torch.sqrt(loss_val)
-    return (loss_train, loss_val, rmse_train, rmse_val, time)
+    return (loss_train, loss_val, rmse_train, rmse_val)
 
 
 def test():
     model.eval()
-    output = model(features, adj)
     adj_test_indices = val_set[:, 0:2]
     adj_test_values = [1 for i in range(test.shape[0])]
-    adj_test = torch.sparse_coo_tensor(adj_val_indices, adj_val_values, (len(test_set), len(test_set)))    
+    adj_test = torch.sparse_coo_tensor(adj_test_indices, adj_test_values, (len(test_set), len(test_set)))
     score = model(tests_features, adj_test, test_set[:, 0:1], test_set[:, 1:2])
 
     loss_test = criterion(score, test_set[:, 3:4])
     rmse_test = torch.sqrt(loss_test)
-    return (loss_train, loss_val, rmse_train, rmse_val, time)
     print("Test set results:",
           "loss= {:.4f}".format(loss_test),
           'rmse_test= {:.4f}'.format(rmse_test))
@@ -111,17 +108,26 @@ if __name__ == '__main__':
     # Load data
     print("Loading data...")
 
-    adj, featrues, train_set, val_set, test_set, idx_train, idx_val, idx_test, n_u, n_n = utils.load_data(args.dataset)
-    featrues = torch.FloatTensor(featrues)
-    train_features = torch.FloatTensor(featrues[idx_train])
-    val_features = torch.FloatTensor(featrues[idx_val])
-    tests_features = torch.FloatTensor(featrues[idx_train])
+    adj, features, train_set, val_set, test_set, idx_train, idx_val, idx_test, n_u, n_n = utils.load_data(args.dataset)
+    features = torch.FloatTensor(features)
+    train_features = torch.FloatTensor(features[idx_train])
+    val_features = torch.FloatTensor(features[idx_val])
+    tests_features = torch.FloatTensor(features[idx_test])
 
-    if device == 'cuda':
-        model.cuda()
-        train_features = train_features.cuda()
-        val_features = val_features.cuda()
-        tests_features = tests_features.cuda()
+    print("features shape: {}".format(features.shape),
+          "train_features shape: {}".format(train_features.shape),
+          "val_features shape: {}".format(val_features.shape),
+          "test_features shape: {}".format(tests_features.shape))
+
+    print("train_set: {}".format(train_set.shape),
+          "val_set: {}".format(val_set.shape),
+          "test_set: {}".format(test_set.shape))
+
+    print("idx_train: {}".format(idx_train.shape),
+          "idx_val: {}".format(idx_val.shape),
+          "idx_test: {}".format(idx_test.shape),
+          "num_users: {}".format(n_u),
+          "num_nodes:{}".format(n_n))
 
     train_set = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size, shuffle=True)
     val_set = torch.Tensor(val_set)
@@ -137,15 +143,21 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     criterion = nn.MSELoss()
 
+    if device == 'cuda':
+        model.cuda()
+        train_features = train_features.cuda()
+        val_features = val_features.cuda()
+        tests_features = tests_features.cuda()
 
-    # TODO: train with mini-batch
+    
     t_total = time.time()
     best_rmse = 9999.0
     for epoch in range(args.epochs):
-        train(epoch, args.fastmode, train_features, train_set, n_u, n_n)
-    
+        train(epoch, args.fastmode, features, train_set, n_u, n_n)
+
     print("Optimization Finished!")
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
     # Testing
     test()
+
