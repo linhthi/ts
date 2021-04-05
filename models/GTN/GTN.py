@@ -46,4 +46,3 @@ class GTN(nn.Module):
         score = self.fc2(h_uv)
         return score
 
-
