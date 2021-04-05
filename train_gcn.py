@@ -8,12 +8,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import torch.utils.data
 
 from models.GTN.GCN import GCN
 import utils.utils as utils
 from torch.utils.tensorboard import SummaryWriter
 
 writer = SummaryWriter()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(123)
 
 # Training setting
 parser = argparse.ArgumentParser()
@@ -22,7 +26,7 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
 parser.add_argument('--fastmode', action='store_true', default=False,
                     help='Validate during training pass.')
 parser.add_argument('--seed', type=int, default=42, help='Random seed.')
-parser.add_argument('--epochs', type=int, default=200,
+parser.add_argument('--epochs', type=int, default=50,
                     help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.01,
                     help='Initial learning rate.')
@@ -34,16 +38,16 @@ parser.add_argument('--dropout', type=float, default=0.5,
                     help='Dropout rate (1 - keep probability).')
 parser.add_argument('--dataset', default='ciao',
                     help='Dataset name')
+parser.add_argument('--batch-size', default=32,
+                    help='Dataset name')
 
 args = parser.parse_args()
-args.cuda = not args.no_cuda and torch.cuda.is_available()
-
+print(args)
 np.random.seed(args.seed)
-torch.manual_seed(args.seed)
-if args.cuda:
-    torch.cuda.manual_seed(args.seed)
 
-# TODO: Load data
+# Load data
+print("Loading data...")
+
 train_set, val_set, test_set, n_users, n_items = utils.split_rating_data(args.dataset)
 trust_data = utils.load_trust_network(args.dataset)
 u, v = utils.get_nodes(args.dataset)
@@ -61,41 +65,18 @@ for node in nodes:
     if label == 'item':
         label_enc = 2
         # category = node[1].get('category')
-    features.append([node[0], label_enc])
+    features.append([label_enc])
 
 features = torch.FloatTensor(features)
-features = torch.FloatTensor(utils.normalize(features))
+# features = torch.FloatTensor(utils.normalize(features))
 
 print(len(features), n_users, n_items, len(u), len(v))
-# Make index for GPU train
-# targets_train, targets_val, targets_test = [], [], []
-# idx_train, idx_val, idx_test = [], [], []
-#
-# for data in train_set:
-#     if data[0] < len(u) and data[1] < len(v):
-#         idx_train.append([data[0], data[1] + len(u)])
-#         targets_train.append([data[3]])
-# for data in val_set:
-#     if data[0] < len(u) and data[1] < len(v):
-#         idx_val.append([data[0], data[1] + len(u)])
-#         targets_val.append([data[3]])
-# for data in test_set:
-#     if data[0] < len(u) and data[1] < len(v):
-#         idx_test.append(([data[0], data[1] + len(u)]))
-#         targets_test.append([data[3]])
-
-# targets_train = torch.LongTensor(targets_train)
-# targets_val = torch.LongTensor(targets_val)
-# targets_test = torch.LongTensor(targets_test)
-# idx_train = torch.LongTensor(idx_train)
-# idx_val  = torch.LongTensor(idx_val)
-# idx_test = torch.LongTensor(idx_test)
-# idx1 = torch.LongTensor([0])
-# idx2 = torch.LongTensor([1])
-
+# train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size, shuffle=True)
+# val_loader = torch.utils.data.DataLoader(val_set)
+# test_loader = torch.utils.data.DataLoader(test_set)
 
 # Model and optimizer
-model = GCN(in_dim=features.shape[1],
+model = GCN(in_dim=1,
             hidden_dim=args.hidden,
             out_dim=1,
             dropout=args.dropout)
@@ -120,12 +101,12 @@ def train(epoch):
     t = time.time()
     model.train()
     optimizer.zero_grad()
-    output = model(features, adj)
     loss_train = 0
     for data in train_set:
         if data[0] < len(u) and data[1] < len(v):
-            y_pred = output[data[0]] + output[data[1] + len(u)]
-            loss_train += F.mse_loss(y_pred, torch.FloatTensor([data[3]]))
+            y_pred = model(features, adj, data[0], data[1] + len(u))
+            # y_pred = (output[data[0]] + output[data[1] + len(u)]).reshape(1)
+            loss_train += F.mse_loss(y_pred, torch.FloatTensor([data[3]]).reshape(1))
     # TODO: calculate mae, rmse metric
     rmse_train = torch.sqrt(loss_train)
     loss_train.backward()
@@ -140,8 +121,9 @@ def train(epoch):
     loss_val = 0
     for data in val_set:
         if data[0] < len(u) and data[1] < len(v):
-            y_pred = output[data[0]] + output[data[1] + len(u)]
-            loss_val += F.mse_loss(y_pred, torch.FloatTensor([data[3]]))
+            y_pred = model(features, adj, data[0], data[1] + len(u))
+            # y_pred = (output[data[0]] + output[data[1] + len(u)]).reshape(1)
+            loss_val += F.mse_loss(y_pred, torch.FloatTensor([data[3]]).reshape(1))
     # TODO: calculate mae, rmse metric
     rmse_val = torch.sqrt(loss_val)
     writer.add_scalar('Loss_train', loss_train, epoch)
@@ -162,9 +144,9 @@ def test():
     loss_test = 0
     for data in test_set:
         if data[0] < len(u) and data[1] < len(v):
-            y_pred = output[data[0]] + output[data[1] + len(u)]
-            print(y_pred, output[[3]])
-            loss_test += F.mse_loss(y_pred, torch.FloatTensor([data[3]]))
+            y_pred = model(features, adj, data[0], data[1] + len(u))
+            # y_pred = (output[data[0]] + output[data[1] + len(u)]).reshape(1)
+            loss_test += F.mse_loss(y_pred, torch.FloatTensor([data[3]]).reshape(1))
             # loss.backward(retain_graph=True)
     # TODO: calculate mae, rmse metric
     rmse_test = torch.sqrt(loss_test)
