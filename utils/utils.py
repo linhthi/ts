@@ -26,7 +26,10 @@ def split_rating_data(dataset):
 
     return train, vali, test, n_users, n_items
 
-
+def load_rating(dataset):
+    file_path = f'data/{dataset}/rating.csv'
+    return pd.read_csv(file_path).values
+    
 def load_trust_network(dataset):
     """
     Load trust network data from file csv
@@ -79,6 +82,12 @@ def get_nodes(dataset):
     return users, items
 
 
+def get_nodes_from_set(in_set):
+    users = np.unique(in_set[:, 0:1])
+    items = np.unique(in_set[:, 1:2])
+    return users, items
+
+
 def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     """Convert a scipy sparse matrix to a torch sparse tensor.
     @param sparse_mx:
@@ -117,14 +126,60 @@ def normalize(mx):
     mx = r_mat_inv.dot(mx)
     return mx
 
+def load_data(dataset):
+    train_set, val_set, test_set, n_users, n_items = split_rating_data(dataset)
+    rating_data = load_rating(dataset)
+    trust_data = load_trust_network(dataset)
+    u, v = get_nodes(dataset)
+    G = gen_graph(rating_data, trust_data, u, v) # Full graph
+
+    adj = get_adj(get_adjacency(G))
+    nodes = G.nodes.data()
+    features = []
+    for node in nodes:
+        label = node[1].get('label')
+        label_const = 1 if label == 'user' else 2
+        features.append([label_const])
+    
+    idx_train = get_idx(train_set, n_users, len(nodes))
+    idx_val = get_idx(val_set, n_users, len(nodes))
+    idx_test = get_idx(test_set, n_users, len(nodes))
+
+    return (adj, features, train_set, val_set, test_set, idx_train, idx_val, idx_test, n_users, len(nodes))
+    
+def get_batches(train_ind, train_labels, batch_size=64, shuffle=True):
+    nums = train_ind.shape[0]
+    if shuffle:
+        np.random.shuffle(train_ind)
+    i = 0
+    while i < nums:
+        cur_ind = train_ind[i:i + batch_size]
+        cur_labels = train_labels[cur_ind]
+        yield cur_ind, cur_labels
+        i += batch_size
+
+def get_idx(in_set, n_users, n_nodes):
+    users = np.unique(in_set[:, 0:1])
+    items = np.unique(in_set[:, 1:2])
+    a = n_users*np.ones(items.shape[0])
+    items = np.add(items, a)
+    idx = np.unique(np.concatenate((users, items))).astype(int).tolist()
+    idx_copy = []
+    for i in idx:
+        if i < n_nodes - 1:
+            idx_copy.append(i)
+    return np.array(idx_copy)
+
+    
+
 
 # Test
 if __name__ == '__main__':
     training, vali, test, n_users, n_items = split_rating_data('ciao')
-    trust_data = load_trust_network('ciao')
-    u, v = get_nodes('ciao')
-    G = gen_graph(training, trust_data, u, v)
-    A = nx.to_scipy_sparse_matrix(G)
-    a = torch.LongTensor([[1, 2], [2, 3], [4, 5]])
-    idx1 = torch.LongTensor([1])
-    print(a[0])
+    # trust_data = load_trust_network('ciao')
+    # u, v = get_nodes('ciao')
+    # G = gen_graph(training, trust_data, u, v)
+    # A = nx.to_scipy_sparse_matrix(G)
+    # A = get_adj(A)
+    # print(A)
+    load_data('ciao')
