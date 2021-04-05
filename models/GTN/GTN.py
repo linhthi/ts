@@ -10,7 +10,8 @@ class GTN(nn.Module):
     """
 
     def __init__(self, in_dim=1, hidden_dim=16, out_dim=1,
-                 n_head=1, n_encoder_layers=6, n_decoder_layers=6, dropout=0.1):
+                n_head=1, n_encoder_layers=6, n_decoder_layers=6,
+                dropout=0.1, sampler):
         """
 
         @param in_dim: dimension of input features
@@ -27,6 +28,7 @@ class GTN(nn.Module):
         self.dropout = dropout
         self.in_dim = in_dim
         self.out_dim = out_dim
+        self.sampler = sampler
 
     def forward(self, x, adj, nodes_u, nodes_v):
         """
@@ -45,4 +47,7 @@ class GTN(nn.Module):
         h_uv = torch.cat((h[nodes_u], h[nodes_v]), 0)
         score = self.fc2(h_uv)
         return score
+
+    def sampling(self, *args, **kwargs):
+        return self.sampler.sampling(*args, **kwargs)
 
