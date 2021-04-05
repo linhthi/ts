@@ -145,8 +145,9 @@ def load_data(dataset):
     idx_val = get_idx(val_set, n_users, len(nodes))
     idx_test = get_idx(test_set, n_users, len(nodes))
 
-    return (adj, features, train_set, val_set, test_set, idx_train, idx_val, idx_test, n_users, len(nodes))
-    
+    return (adj, features, train_set, val_set, test_set, idx_train, idx_val, idx_test, n_users - 1, len(nodes))
+
+
 def get_batches(train_ind, train_labels, batch_size=64, shuffle=True):
     nums = train_ind.shape[0]
     if shuffle:
@@ -157,6 +158,7 @@ def get_batches(train_ind, train_labels, batch_size=64, shuffle=True):
         cur_labels = train_labels[cur_ind]
         yield cur_ind, cur_labels
         i += batch_size
+
 
 def get_idx(in_set, n_users, n_nodes):
     users = np.unique(in_set[:, 0:1])
