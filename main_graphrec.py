@@ -84,31 +84,6 @@ def main():
     print('\n***** Data Loaded ****\n')
 
     data_file = open(path_data, 'rb')
-
-    history_u_lists = pickle.load(data_file)
-    history_ur_lists = pickle.load(data_file)
-    history_v_lists = pickle.load(data_file)
-    history_vr_lists = pickle.load(data_file)
-
-    train_u = pickle.load(data_file)
-    train_v = pickle.load(data_file)
-    train_r = pickle.load(data_file)
-
-    test_u = pickle.load(data_file)
-    test_v = pickle.load(data_file)
-    test_r = pickle.load(data_file)
-
-    social_adj_lists = pickle.load(data_file)
-    ratings_list = pickle.load(data_file)
-    users = pickle.load(data_file)
-    friends = pickle.load(data_file)
-    trust = pickle.load(data_file)
-
-    usersL = list(set(users + friends))
-    num_users = max(max(usersL), max(train_u), max(test_u)) + 1
-    num_items = max(max(list(train_v)), max(list(test_v))) + 1
-    num_ratings = ratings_list.__len__()
-
     """
     ## dataset 
     history_u_lists, history_ur_lists:  user's purchased history (item set in training set), and his/her rating score (dict)
@@ -117,11 +92,17 @@ def main():
     train_u, train_v, train_r: training_set (user, item, rating)
     test_u, test_v, test_r: testing set (user, item, rating)
 
-    # please add the validation set
+    #add the validation set
 
     social_adj_lists: user's connected neighborhoods
     ratings_list: rating value from 1 to 5 (5 opinion embeddings)
     """
+    history_u_lists, history_ur_lists, history_v_lists, history_vr_lists, train_u, train_v, train_r, test_u, test_v, test_r, social_adj_lists, ratings_list, users, friends, trust = pickle.load(data_file)
+    usersL = list(set(users + friends))
+    num_users = max(max(usersL), max(train_u), max(test_u)) + 1
+    num_items = max(max(list(train_v)), max(list(test_v))) + 1
+    num_ratings = ratings_list.__len__()
+
 
     trainset = torch.utils.data.TensorDataset(torch.LongTensor(train_u), torch.LongTensor(train_v),
                                               torch.FloatTensor(train_r))

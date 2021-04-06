@@ -137,26 +137,7 @@ class dataPreprocess(object):
         friend = list(set(friend))
 
         with open(self.filepath + '/dataset.pickle', 'wb') as files:
-            pickle.dump(userItemDict, files, pickle.HIGHEST_PROTOCOL)
-
-            pickle.dump(userRatings, files, pickle.HIGHEST_PROTOCOL)
-
-            pickle.dump(itemUserDict, files, pickle.HIGHEST_PROTOCOL)
-
-            pickle.dump(itemRatings, files, pickle.HIGHEST_PROTOCOL)
-
-            pickle.dump(trainUsers, files, pickle.HIGHEST_PROTOCOL)
-            pickle.dump(trainItems, files, pickle.HIGHEST_PROTOCOL)
-            pickle.dump(trainRatings, files, pickle.HIGHEST_PROTOCOL)
-
-            pickle.dump(testUsers, files, pickle.HIGHEST_PROTOCOL)
-            pickle.dump(testItems, files, pickle.HIGHEST_PROTOCOL)
-            pickle.dump(testRatings, files, pickle.HIGHEST_PROTOCOL)
-
-            pickle.dump(userUserDict, files, pickle.HIGHEST_PROTOCOL)
-
-            pickle.dump(ratingsL, files, pickle.HIGHEST_PROTOCOL)
-
-            pickle.dump(user, files, pickle.HIGHEST_PROTOCOL)
-            pickle.dump(friend, files, pickle.HIGHEST_PROTOCOL)
-            pickle.dump(trust, files, pickle.HIGHEST_PROTOCOL)
+            pickle.dump((userItemDict, userRatings, itemUserDict, itemRatings,
+                        trainUsers, trainItems, trainRatings, 
+                        testUsers, testItems, testRatings, 
+                        userUserDict, ratingsL, user, friend, trust), files, pickle.HIGHEST_PROTOCOL)
