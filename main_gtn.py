@@ -38,7 +38,6 @@ def get_args():
                         help='Dataset name')
     args = parser.parse_args()
     print(args)
-    args.cuda = not args.no_cuda and torch.cuda.is_available()
     return args
 
 
@@ -51,10 +50,10 @@ def train(epoch, fastmode, features, train_set, val_set, idx_val, n_users, n_nod
         idx_batch = utils.get_idx(batch.numpy(), n_users, n_nodes)
         batch_features = features[idx_batch]
         layer_sizes = [batch_features.shape[0], batch_features.shape[0]]
-        sampler = Sampler_GCN(None, features, adj, input_dim=1, 
-                          layer_sizes=layer_sizes, device=device)
+        sampler = Sampler_GCN(None, features, adj, input_dim=1,
+                              layer_sizes=layer_sizes, device=device)
         bf, adj_batch, _ = sampler.sampling(idx_batch)
-        
+
         nodes_u, nodes_v = [], []
         idx_batch = idx_batch.tolist()
         for data in batch:
@@ -65,15 +64,15 @@ def train(epoch, fastmode, features, train_set, val_set, idx_val, n_users, n_nod
                     nodes_u.append(i)
                 if idx_batch[i] == v + n_users:
                     nodes_v.append(i)
-        score = model(batch_features, adj_batch[0], nodes_u, nodes_v)
-        loss_train = criterion(score, batch[:, 3:4].type(torch.FloatTensor))
+        score = model(batch_features.to(device), adj_batch[0].to(device), nodes_u, nodes_v)
+        loss_train = criterion(score, batch[:, 3:4].type(torch.FloatTensor).to(device))
         count += 1
         # TODO: calculate mae metric
         rmse_train = torch.sqrt(loss_train)
         loss_train.backward()
         optimizer.step()
-        if count % 1 == 0:
-            print("Epoch %d/%d: loss_train: %0.4f, rmse_train: %0.4f" %(count, epoch, loss_train, rmse_train))
+        if count % 1000 == 0:
+            print("Epoch %d/%d: loss_train: %0.4f, rmse_train: %0.4f" % (count, epoch, loss_train, rmse_train))
 
     loss_val, rmse_val = 0, 0
     if not fastmode:
@@ -82,7 +81,7 @@ def train(epoch, fastmode, features, train_set, val_set, idx_val, n_users, n_nod
         model.eval()
         val_features = features[idx_val]
         bf, adj_val, _ = sampler.sampling(idx_val)
-        
+
         nodes_u, nodes_v = [], []
         idx_val = idx_val.tolist()
         for data in val_set:
@@ -94,12 +93,12 @@ def train(epoch, fastmode, features, train_set, val_set, idx_val, n_users, n_nod
                 if idx_val[i] == v + n_users:
                     nodes_v.append(i)
         score = model(val_features, adj_val[0], nodes_u, nodes_v)
-        loss_val = criterion(score, val_set[:, 3:4].type(torch.FloatTensor))
+        loss_val = criterion(score, val_set[:, 3:4].type(torch.FloatTensor).to(device))
         rmse_val = torch.sqrt(loss_val)
     return (loss_train, loss_val, rmse_train, rmse_val)
 
 
-def test(features, test_set, idx_test, n_users, model):
+def test(features, test_set, idx_test, n_users, model, device):
     model.eval()
     tests_features = features[idx_test]
     bf, adj_test, _ = sampler.sampling(idx_test)
@@ -114,8 +113,8 @@ def test(features, test_set, idx_test, n_users, model):
                 nodes_u.append(i)
             if idx_test[i] == v + n_users:
                 nodes_v.append(i)
-    score = model(tests_features, adj_test[0], nodes_u, nodes_v)
-    loss_test = criterion(score, test_set[:, 3:4].type(torch.FloatTensor))
+    score = model(tests_features.to(device), adj_test[0].to(device), nodes_u, nodes_v)
+    loss_test = criterion(score, test_set[:, 3:4].type(torch.FloatTensor).to(device))
     rmse_test = torch.sqrt(loss_test)
     print("Test set results:",
           "loss= {:.4f}".format(loss_test),
@@ -127,6 +126,7 @@ if __name__ == '__main__':
     args = get_args()
     writer = SummaryWriter()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(123)
 
@@ -134,15 +134,15 @@ if __name__ == '__main__':
     print("Loading data...")
 
     adj, features, train_set, val_set, test_set, idx_train, idx_val, idx_test, n_u, n_n = utils.load_data(args.dataset)
-    features = torch.FloatTensor(features).to(device)
-    train_features = torch.FloatTensor(features[idx_train]).to(device)
-    val_features = torch.FloatTensor(features[idx_val]).to(device)
-    tests_features = torch.FloatTensor(features[idx_test]).to(device)
+    features = torch.FloatTensor(features)
+    train_features = torch.FloatTensor(features[idx_train])
+    val_features = torch.FloatTensor(features[idx_val])
+    test_features = torch.FloatTensor(features[idx_test])
 
     print("features shape: {}".format(features.shape),
           "train_features shape: {}".format(train_features.shape),
           "val_features shape: {}".format(val_features.shape),
-          "test_features shape: {}".format(tests_features.shape))
+          "test_features shape: {}".format(test_features.shape))
 
     print("train_set: {}".format(train_set.shape),
           "val_set: {}".format(val_set.shape),
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     test_set = torch.Tensor(test_set).to(device)
 
     layer_sizes = [args.batch_size, args.batch_size]
-    sampler = Sampler_GCN(None, features, adj, input_dim=1, 
+    sampler = Sampler_GCN(None, features, adj, input_dim=1,
                           layer_sizes=layer_sizes, device=device)
 
     # Model and optimizer
@@ -170,30 +170,26 @@ if __name__ == '__main__':
                 sampler=sampler)
     print(model.__repr__())
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    # optimizer = torch.optim.RMSprop(model.parameters(), lr=args.lr, alpha=0.9)
     criterion = nn.MSELoss()
 
-    if device == 'cuda':
-        model.cuda()
-        train_features = train_features.cuda()
-        val_features = val_features.cuda()
-        tests_features = tests_features.cuda()
+    model.to(device)
+    train_features.to(device)
+    val_features.to(device)
+    test_features.to(device)
 
-    
     t_total = time.time()
     best_rmse = 9999.0
     for epoch in range(args.epochs):
-        loss_train, loss_val, rmse_train, rmse_val = train(epoch, args.fastmode, features, train_set, 
-                                                            val_set, idx_val, n_u, n_n, device, model)
+        loss_train, loss_val, rmse_train, rmse_val = train(epoch, True, features, train_set,
+                                                           val_set, idx_val, n_u, n_n, device, model)
         print("Epoch: {}".format(epoch),
-              "loss_train: {0.4f}".format(loss_train),
-              "loss_val: {0.4f}".format(loss_val),
-              "rmse_train: {0.4f}".format(rmse_train),
-              "rmse_val:{0.4f}".format(rmse_val))
+              "loss_train: {:.4f}".format(loss_train),
+              "loss_val: {:.4f}".format(loss_val),
+              "rmse_train: {:.4f}".format(rmse_train),
+              "rmse_val:{:.4f}".format(rmse_val))
 
     print("Optimization Finished!")
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
     # Testing
-    test(features, test_set, idx_test, n_u, model)
-
+    test(test_features, test_set, idx_test, n_u, model, device)
