@@ -40,27 +40,26 @@ def load_trust_network(dataset):
     return pd.read_csv(file_path).values
 
 
-def gen_graph(rating_data, trust_data, users, items):
+def gen_graph(rating_data, trust_data, n_users, n_items):
     """
     Generate Graph from rating and trust network data
     @param rating_data:
     @param trust_data:
-    @param users:
-    @param items:
+    @param n_users:
+    @param n_items:
     @return: Directed graph networkx
     """
     G = nx.DiGraph()
-    n_users = len(users)
-    print(n_users)
+    print(n_users, n_items)
 
-    for user in users:
+    for user in range(1, n_users):
         G.add_node(user, id=user, label='user')
 
-    for item in items:
-        G.add_node(item + n_users, id=item + n_users, label='item')
+    for item in range(n_users, n_items + n_users):
+        G.add_node(item + n_users, id=item, label='item')
 
     for data in rating_data:
-        G.add_edge(data[0], data[1] + n_users, rating=data[3])
+        G.add_edge(data[0], data[1] + n_users - 1, rating=data[3])
 
     for data in trust_data:
         G.add_edge(data[0], data[1])
@@ -100,6 +99,17 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse.FloatTensor(indices, values, shape)
 
+def to_sparse(x):
+    """ converts dense tensor x to sparse format """
+    x_typename = torch.typename(x).split('.')[-1]
+    sparse_tensortype = getattr(torch.sparse, x_typename)
+
+    indices = torch.nonzero(x)
+    if len(indices.shape) == 0:  # if all elements are zeros
+        return sparse_tensortype(*x.shape)
+    indices = indices.t()
+    values = x[tuple(indices[i] for i in range(indices.shape[0]))]
+    return sparse_tensortype(indices, values, x.size())
 
 def get_adjacency(G):
     return nx.to_scipy_sparse_matrix(G)
@@ -131,9 +141,10 @@ def load_data(dataset):
     rating_data = load_rating(dataset)
     trust_data = load_trust_network(dataset)
     u, v = get_nodes(dataset)
-    G = gen_graph(rating_data, trust_data, u, v) # Full graph
+    G = gen_graph(rating_data, trust_data, n_users, n_items) # Full graph
 
-    adj = get_adj(get_adjacency(G))
+    # adj = get_adj(get_adjacency(G))
+    adj = nx.adj_matrix(G)
     nodes = G.nodes.data()
     features = []
     for node in nodes:
@@ -166,11 +177,11 @@ def get_idx(in_set, n_users, n_nodes):
     a = n_users*np.ones(items.shape[0])
     items = np.add(items, a)
     idx = np.unique(np.concatenate((users, items))).astype(int).tolist()
-    idx_copy = []
-    for i in idx:
-        if i < n_nodes - 1:
-            idx_copy.append(i)
-    return np.array(idx_copy)
+    # idx_copy = []
+    # for i in idx:
+    #     if i < n_nodes - 1:
+    #         idx_copy.append(i)
+    return np.array(idx)
 
     
 

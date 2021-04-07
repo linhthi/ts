@@ -11,7 +11,7 @@ class GTN(nn.Module):
 
     def __init__(self, in_dim=1, hidden_dim=16, out_dim=1,
                 n_head=1, n_encoder_layers=6, n_decoder_layers=6,
-                dropout=0.1, sampler):
+                dropout=0.1, sampler=None):
         """
 
         @param in_dim: dimension of input features
@@ -44,7 +44,7 @@ class GTN(nn.Module):
         h = self.fc1(h).reshape(x.shape[0], 1, self.out_dim) # Node embedding
         # TODO: add transformer layer below
         h = self.transformer(h).reshape(x.shape[0], self.out_dim)
-        h_uv = torch.cat((h[nodes_u], h[nodes_v]), 0)
+        h_uv = torch.cat((h[nodes_u], h[nodes_v]), 1)
         score = self.fc2(h_uv)
         return score
 
