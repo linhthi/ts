@@ -72,7 +72,7 @@ def train(epoch, fastmode, features, train_set, val_set, idx_val, n_users, n_nod
         rmse_train = torch.sqrt(loss_train)
         loss_train.backward()
         optimizer.step()
-        if count % 1000 == 0:
+        if count % 1 == 0:
             print("Epoch %d/%d: loss_train: %0.4f, rmse_train: %0.4f" %(count, epoch, loss_train, rmse_train))
 
     loss_val, rmse_val = 0, 0
@@ -99,7 +99,7 @@ def train(epoch, fastmode, features, train_set, val_set, idx_val, n_users, n_nod
     return (loss_train, loss_val, rmse_train, rmse_val)
 
 
-def test(features, test_set, idx_test, n_users):
+def test(features, test_set, idx_test, n_users, model):
     model.eval()
     tests_features = features[idx_test]
     bf, adj_test, _ = sampler.sampling(idx_test)
@@ -195,5 +195,5 @@ if __name__ == '__main__':
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
     # Testing
-    test(features, test_set, idx_test, n_u)
+    test(features, test_set, idx_test, n_u, model)
 
