@@ -50,7 +50,7 @@ We use 60/20/20 for training, validation, test set
 |  PMF | 1.0581 |0.8184|
 |  NeuMF | 1.0439 |0.8052|
 |  GraphRec | 1.0090 |0.7834|
-|  GTN |  ||
+|  GTN | 0.9732 ||
 
 
 **Epinions Dataset**
@@ -60,7 +60,7 @@ We use 60/20/20 for training, validation, test set
 |  PMF | 1.1829 |0.9713|
 |  NeuMF | 1.1411 |0.9072|
 |  GraphRec | 1.1078 |0.8524|
-|  GTN |  ||
+|  GTN | 1.0139 ||
 
 
 ### Reference: 
@@ -75,5 +75,5 @@ We use 60/20/20 for training, validation, test set
 1. Graph Neural Networks for Social Recommendation (WWW'19). https://arxiv.org/pdf/1902.07243
 
 #### GTN
-1. Graph Transfomer Networks (NeurIPS 2019). https://arxiv.org/pdf/1902.07243
+Graph Convolutional Network add Transformer Encoder layer
 
