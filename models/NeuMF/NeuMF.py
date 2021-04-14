@@ -44,7 +44,7 @@ class NeuMF:
         self.number_of_items = number_of_items
         self.number_of_users = number_of_users
 
-    def get_model(self):
+    def get_model(self) -> object:
         # input layer
         user = Input(shape=(1), dtype="int32", name="user_id")
         item = Input(shape=(1), dtype="int32", name="item_id")
@@ -118,9 +118,9 @@ class NeuMF:
 
     def train(self, train, valid, n_epochs):
         N_EPOCHS = n_epochs
-        neuMF_model = self.get_model()
+        self.neuMF_model = self.get_model()
 
-        neuMF_model.compile(
+        self.neuMF_model.compile(
             optimizer=SGD(lr=0.001),
             loss = tf.keras.losses.MSE,
             metrics=[
@@ -129,8 +129,8 @@ class NeuMF:
             ]
         )
 
-        neuMF_model._name = "neural_matrix_factorization"
-        neuMF_model.summary()
+        self.neuMF_model._name = "neural_matrix_factorization"
+        self.neuMF_model.summary()
 
         user_train, item_train, rating_train = [], [], []
         for data in train:
@@ -151,7 +151,7 @@ class NeuMF:
         tensorboard_callback = tf.keras.callbacks.TensorBoard(logdir, histogram_freq=1)
         early_stopping_callback = tf.keras.callbacks.EarlyStopping(patience=6)
 
-        train_hist = neuMF_model.fit(
+        self.neuMF_model.fit(
             x=[np.array(user_train), np.array(item_train)],  # input
             y = np.array(rating_train).astype(float),  # label rating
             validation_data=([np.array(user_valid), np.array(item_valid)], np.array(rating_valid).astype(float)),
@@ -159,20 +159,15 @@ class NeuMF:
             callbacks=[tensorboard_callback, early_stopping_callback],
             verbose=1,
         )
-        neuMF_model.save("my_neuMF_h5_model.h5")
+        self.neuMF_model.save("my_neuMF_h5_model.h5")
 
     def test(self, test):
-        neuMF_model = keras.models.load_model("my_neuMF_h5_model.h5")
         user_test, item_test, rating_test = [], [], []
         for data in test:
             user_test.append(data[0])
             item_test.append(data[1])
             rating_test.append(data[3])
-        predictions = neuMF_model.predict([np.array(user_test), np.array(item_test)])
-        rmse_test = np.sqrt(keras.losses.MSE(np.array(rating_test).astype(float), predictions))
-        mae_test = keras.metrics.mean_absolute_error(np.array(rating_test).astype(float), predictions)
-        print("RMSE test: %0.4f, MAE test: %0.4f" % (rmse_test, mae_test))
-
+        self.neuMF_model.evaluate([np.array(user_test), np.array(item_test)], np.array(rating_test))
 
 
 
