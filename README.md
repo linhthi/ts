@@ -66,24 +66,25 @@ We use 60/20/20 for training, validation, test set
 |  PMF | 1.1829 |0.9713|
 |  NeuMF | 1.1411 |0.9072|
 |  GraphRec | 1.1078 |0.8524|
-|  GCN | 1.1849 |0.9675|
+|  GCN | 1.1680 |0.8956|
 |  GTN | 1.0139 ||
 
 
 ### Reference: 
 #### PMF: 
 1. Mnih, A., & Salakhutdinov, R. (2007). Probabilistic matrix factorization. In Advances in neural information processing systems (pp. 1257-1264).  
-2. Salakhutdinov, R. Probabilistic matrix factorization in Matlab. http://www.utstat.toronto.edu/~rsalakhu/BPMF.html.  
+2. [Salakhutdinov, R. Probabilistic matrix factorization in Matlab.](http://www.utstat.toronto.edu/~rsalakhu/BPMF.html.) 
 
 #### NeuMF:
-1. "Neural Collaborative Filtering" at WWW'17. https://www.comp.nus.edu.sg/~xiangnan/papers/ncf.pdf
+1. [Neural Collaborative Filtering at WWW'17](https://www.comp.nus.edu.sg/~xiangnan/papers/ncf.pdf)
 
 #### GraphRec
-1. Graph Neural Networks for Social Recommendation (WWW'19). https://arxiv.org/pdf/1902.07243
+1. [Graph Neural Networks for Social Recommendation (WWW'19). ](https://arxiv.org/pdf/1902.07243)
 
 #### GCN
-1. Graph Convolutional network
+1. [Graph Convolutional Network](https://tkipf.github.io/graph-convolutional-networks/)
 
-#### GTN
-Graph Convolutional Network add Transformer Encoder layer
+#### GTN (Graph Convolutional Network add Transformer Encoder layer)
+1. [Attention is all you need](https://papers.nips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf)
+
 
