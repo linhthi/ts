@@ -60,6 +60,7 @@ We use 60/20/20 for training, validation, test set
 |  PMF | 1.1829 |0.9713|
 |  NeuMF | 1.1411 |0.9072|
 |  GraphRec | 1.1078 |0.8524|
+|  GCN | 1.0605 ||
 |  GTN | 1.0139 ||
 
 
@@ -73,6 +74,9 @@ We use 60/20/20 for training, validation, test set
 
 #### GraphRec
 1. Graph Neural Networks for Social Recommendation (WWW'19). https://arxiv.org/pdf/1902.07243
+
+#### GCN
+1. Graph Convolutional network
 
 #### GTN
 Graph Convolutional Network add Transformer Encoder layer

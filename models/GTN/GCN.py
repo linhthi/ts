@@ -23,6 +23,9 @@ class GCN(nn.Module):
         self.fc1 = nn.Linear(hidden_dim, out_dim)
         self.fc2 = nn.Linear(out_dim*2, out_dim)
         self.dropout = dropout
+        self.in_dim = in_dim
+        self.hidden_dim = hidden_dim
+        self.out_dim = out_dim
 
     def forward(self, x, adj, nodes_u, nodes_v):
         """
