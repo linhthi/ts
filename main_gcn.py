@@ -48,10 +48,11 @@ def train(features, adj, train_set, val_set, fastmode, model, device):
     score = model(features, adj, train_set[:, 0:1].reshape(train_set.shape[0], ), train_set[:, 1:2].reshape(train_set.shape[0], ))
     loss_train = criterion(score, train_set[:, 3:4].type(torch.FloatTensor).to(device))
     rmse_train = torch.sqrt(loss_train)
+    mae_train = mae_loss(score, train_set[:, 3:4].type(torch.FloatTensor).to(device))
     loss_train.backward()
     optimizer.step()
 
-    loss_val, rmse_val = 0, 0
+    loss_val, rmse_val, mae_val = 0, 0, 0
     if not fastmode:
         # Evaluate validation set performance separately,
         # deactivates dropout during validation run.
@@ -59,8 +60,9 @@ def train(features, adj, train_set, val_set, fastmode, model, device):
         score = model(features, adj, val_set[:, 0:1].reshape(val_set.shape[0], ), val_set[:, 1:2].reshape(val_set.shape[0], ))
         loss_val = criterion(score, val_set[:, 3:4].type(torch.FloatTensor).to(device))
         rmse_val = torch.sqrt(loss_val)
+        mae_val = mae_loss(score, val_set[:, 3:4].type(torch.FloatTensor).to(device))
     total_time = time.time() - t
-    return loss_train, loss_val, rmse_train, rmse_val, total_time
+    return loss_train, loss_val, rmse_train, mae_train, rmse_val, mae_val, total_time
 
 
 def test(features, adj_test, test_set, model, device):
@@ -68,9 +70,11 @@ def test(features, adj_test, test_set, model, device):
     score = model(features, adj_test, test_set[:, 0:1].reshape(len(test_set), ), test_set[:, 1:2].reshape(len(test_set), ))
     loss_test = criterion(score, test_set[:, 3:4].type(torch.FloatTensor).to(device))
     rmse_test = torch.sqrt(loss_test)
+    mae_test = mae_loss(score, test_set[:, 3:4].type(torch.FloatTensor).to(device))
     print("Test set results:",
           "loss= {:.4f}".format(loss_test),
-          'rmse_test= {:.4f}'.format(rmse_test))
+          'rmse_test= {:.4f}'.format(rmse_test),
+          "mae_test= {:.4f}".format(mae_test))
 
 
 # Train model
@@ -99,11 +103,12 @@ if __name__ == '__main__':
     print(model.__repr__())
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     criterion = nn.MSELoss()
+    mae_loss = nn.L1Loss()
     model.to(device)
 
     t_total = time.time()
     for epoch in range(args.epochs):
-        loss_train, loss_val, rmse_train, rmse_val, tt_time = train(features=features,
+        loss_train, loss_val, rmse_train, mae_train, rmse_val, mae_val, tt_time = train(features=features,
                                                                     adj=adj,
                                                                     train_set=train_set,
                                                                     val_set=val_set,
@@ -115,9 +120,10 @@ if __name__ == '__main__':
               "loss_train: {:.4f}".format(loss_train),
               "loss_val: {:.4f}".format(loss_val),
               "rmse_train: {:.4f}".format(rmse_train),
+              "mae_train: {:.4f}".format(mae_train),
               "rmse_val:{:.4f}".format(rmse_val),
-              "total_time: {} s".format(tt_time)
-              )
+              "mae_val:{:.4f}".format(mae_val),
+              "total_time: {} s".format(tt_time))
 
     print("Optimization Finished!")
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
