@@ -26,10 +26,12 @@ def split_rating_data(dataset):
 
     return train, vali, test, n_users, n_items
 
+
 def load_rating(dataset):
     file_path = f'data/{dataset}/rating.csv'
     return pd.read_csv(file_path).values
-    
+
+
 def load_trust_network(dataset):
     """
     Load trust network data from file csv
@@ -99,6 +101,7 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse.FloatTensor(indices, values, shape)
 
+
 def to_sparse(x):
     """ converts dense tensor x to sparse format """
     x_typename = torch.typename(x).split('.')[-1]
@@ -110,6 +113,7 @@ def to_sparse(x):
     indices = indices.t()
     values = x[tuple(indices[i] for i in range(indices.shape[0]))]
     return sparse_tensortype(indices, values, x.size())
+
 
 def get_adjacency(G):
     return nx.to_scipy_sparse_matrix(G)
@@ -136,27 +140,25 @@ def normalize(mx):
     mx = r_mat_inv.dot(mx)
     return mx
 
+
 def load_data(dataset):
     train_set, val_set, test_set, n_users, n_items = split_rating_data(dataset)
     rating_data = load_rating(dataset)
     trust_data = load_trust_network(dataset)
     u, v = get_nodes(dataset)
-    G = gen_graph(rating_data, trust_data, n_users, n_items) # Full graph
+    G = gen_graph(rating_data, trust_data, n_users, n_items)  # Full graph
 
-    # adj = get_adj(get_adjacency(G))
-    adj = nx.adj_matrix(G)
+    adj = get_adj(get_adjacency(G))
+    # adj = nx.adj_matrix(G)
+    # adj = normalize(adj)
     nodes = G.nodes.data()
     features = []
     for node in nodes:
         label = node[1].get('label')
         label_const = 1 if label == 'user' else 2
         features.append([label_const])
-    
-    idx_train = get_idx(train_set, n_users, len(nodes))
-    idx_val = get_idx(val_set, n_users, len(nodes))
-    idx_test = get_idx(test_set, n_users, len(nodes))
 
-    return (adj, features, train_set, val_set, test_set, idx_train, idx_val, idx_test, n_users - 1, len(nodes))
+    return adj, features, train_set, val_set, test_set, G
 
 
 def get_batches(train_ind, train_labels, batch_size=64, shuffle=True):
@@ -171,19 +173,13 @@ def get_batches(train_ind, train_labels, batch_size=64, shuffle=True):
         i += batch_size
 
 
-def get_idx(in_set, n_users, n_nodes):
+def get_idx(in_set, n_users):
     users = np.unique(in_set[:, 0:1])
     items = np.unique(in_set[:, 1:2])
-    a = n_users*np.ones(items.shape[0])
+    a = n_users * np.ones(items.shape[0])
     items = np.add(items, a)
     idx = np.unique(np.concatenate((users, items))).astype(int).tolist()
-    # idx_copy = []
-    # for i in idx:
-    #     if i < n_nodes - 1:
-    #         idx_copy.append(i)
     return np.array(idx)
-
-    
 
 
 # Test
