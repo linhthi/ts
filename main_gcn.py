@@ -89,7 +89,7 @@ if __name__ == '__main__':
     # Load data
     print("Loading data...")
 
-    adj, features, train_set, val_set, test_set, G = utils.load_data(args.dataset)
+    adj, features, train_set, val_set, test_set, G, _ = utils.load_data(args.dataset)
     features = torch.FloatTensor(features)
     train_set = torch.LongTensor(train_set).to(device)
     val_set = torch.LongTensor(val_set).to(device)

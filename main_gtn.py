@@ -107,7 +107,7 @@ if __name__ == '__main__':
                                                                         model=model,
                                                                         device=device)
             loss_val, rmse_val, mae_val = test(val_features, val_adj, val_set_train, model, device)
-            if i % (len(train_set) / args.batch_size) == 100:
+            if i % 100 == 0:
                 print("Epoch: {0}/{1}".format(epoch, i),
                       "loss_train: {:.4f}".format(loss_train),
                       "loss_val: {:.4f}".format(loss_val),
