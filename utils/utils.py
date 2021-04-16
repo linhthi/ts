@@ -158,19 +158,18 @@ def load_data(dataset):
         label_const = 1 if label == 'user' else 2
         features.append([label_const])
 
-    return adj, features, train_set, val_set, test_set, G
+    return adj, features, train_set, val_set, test_set, G, n_users
 
 
-def get_batches(train_ind, train_labels, batch_size=64, shuffle=True):
-    nums = train_ind.shape[0]
-    if shuffle:
-        np.random.shuffle(train_ind)
-    i = 0
-    while i < nums:
-        cur_ind = train_ind[i:i + batch_size]
-        cur_labels = train_labels[cur_ind]
-        yield cur_ind, cur_labels
-        i += batch_size
+def get_batches(graph):
+    adj = get_adj(get_adjacency(graph))
+    nodes = graph.nodes.data()
+    features = []
+    for node in nodes:
+        label = node[1].get('label')
+        label_const = 1 if label == 'user' else 2
+        features.append([label_const])
+    return torch.Tensor(features), adj
 
 
 def get_idx(in_set, n_users):
@@ -181,6 +180,59 @@ def get_idx(in_set, n_users):
     idx = np.unique(np.concatenate((users, items))).astype(int).tolist()
     return np.array(idx)
 
+
+def sampling_neighbor(batch, full_graph, n_users):
+    """
+    Sampling neighbor nodes with users and items from full graph
+        @param batch:
+        @param full_graph:
+        @param n_users:
+    """
+    users_id = np.unique(batch[:, 0:1]).tolist()
+    items_id = np.unique(batch[:, 1:2]).tolist()
+    users_map = dict()
+    items_map = dict()
+    G = nx.DiGraph()
+
+    # Add user nodes and items which friend bought
+    num_node_friends, num_node_items_friend_bought = 0, 0
+
+    for user in range(1, len(users_id)+1):
+        G.add_node(user, id=user, label='user')
+        users_map.update({users_id[user-1] : user})
+        cnt_friend = 0
+        friends = [n for n in full_graph.neighbors(user) if n <= n_users]
+
+        while cnt_friend < len(friends) and cnt_friend < 3:
+            friend_node = user + num_node_friends + len(users_id) + len(items_id)
+            G.add_node(friend_node, label='user')
+            cnt_friend += 1
+            num_node_friends += 1
+            friend = friends[cnt_friend]
+            items_friend_bought = [n for n in full_graph.neighbors(friend) if n > n_users]
+            cnt_item = 0
+            while cnt_item < len(items_friend_bought) and cnt_item < 3:
+                item_node = user + 4 * len(users_id) + len(items_id) + num_node_items_friend_bought
+                G.add_node(item_node, label='item')
+                cnt_item += 1
+                num_node_items_friend_bought += 1
+                item = items_friend_bought[cnt_item]
+                G.add_edge(friend_node, item_node, rating=full_graph[friend][item])
+
+    cnt = 0
+    for item in range(len(users_id), len(users_id) + len(items_id)):
+        G.add_node(item, id=item, label='item')
+        items_map.update({items_id[cnt] + len(users_id) : item})
+        cnt += 1
+
+    train_set = []
+    for data in batch:
+        u = data[0]
+        v = data[1] + len(users_id)
+        G.add_edge(u, v, rating=data[3])
+        train_set.append([users_map.get(int(u)), items_map.get(int(v)), data[3]])
+
+    return G, torch.LongTensor(train_set)
 
 # Test
 if __name__ == '__main__':

@@ -22,7 +22,7 @@ class GTN(nn.Module):
         self.gc2 = GraphConvolution(hidden_dim, hidden_dim)
         self.fc1 = nn.Linear(hidden_dim, out_dim)
         self.fc2 = nn.Linear(out_dim*2, out_dim)
-        self.transformer = nn.TransformerEncoderLayer(d_model=in_dim, nhead=n_head, dim_feedforward=hidden_dim, dropout=dropout)
+        self.transformer = nn.TransformerEncoderLayer(d_model=in_dim, nhead=n_head, dim_feedforward=hidden_dim//4, dropout=dropout)
         self.dropout = dropout
         self.in_dim = in_dim
         self.out_dim = out_dim
