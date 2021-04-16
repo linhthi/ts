@@ -93,7 +93,7 @@ if __name__ == '__main__':
     model.to(device)
 
     t_total = time.time()
-    for epoch in range(args.epochs):
+    for epoch in range(1, args.epochs + 1):
         for i, batch in enumerate(train_set):
             batch_g, batch_set = utils.sampling_neighbor(batch, G, n_users=n_users)
             batch_features, batch_adj = utils.get_batches(batch_g)
@@ -108,25 +108,36 @@ if __name__ == '__main__':
                                                                         device=device)
             loss_val, rmse_val, mae_val = test(val_features, val_adj, val_set_train, model, device)
             if i % 100 == 0:
-                print("Epoch: {0}/{1}".format(epoch, i),
-                      "loss_train: {:.4f}".format(loss_train),
-                      "loss_val: {:.4f}".format(loss_val),
-                      "rmse_train: {:.4f}".format(rmse_train),
-                      "mae_train: {:.4f}".format(mae_train),
-                      "rmse_val:{:.4f}".format(rmse_val),
-                      "mae_val:{:.4f}".format(mae_val),
-                      "total_time: {} s".format(tt_time))
+                writer.add_scalar('loss_train', loss_train, i*epoch)
+                writer.add_scalar('rmse_train', rmse_train, i*epoch)
+                writer.add_scalar('mae_train', mae_train, i*epoch)
+                writer.add_scalar('rmse_val', rmse_val, i*epoch)
+                writer.add_scalar('mae_val', mae_val, i*epoch)
+            # if i % 100 == 0:
+                # print("Epoch: {0}/{1}".format(epoch, i),
+                #       "loss_train: {:.4f}".format(loss_train),
+                #       "loss_val: {:.4f}".format(loss_val),
+                #       "rmse_train: {:.4f}".format(rmse_train),
+                #       "mae_train: {:.4f}".format(mae_train),
+                #       "rmse_val:{:.4f}".format(rmse_val),
+                #       "mae_val:{:.4f}".format(mae_val),
+                #       "total_time: {} s".format(tt_time))
 
     print("Optimization Finished!")
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
     # Testing
     # TODO: add validation edges to predict test edges
-    test_bacth_set = [t for t in test_set][0]
-    test_g, test_bacth_set = utils.sampling_neighbor(test_bacth_set, G, n_users)
-    test_features, test_adj = utils.get_batches(val_g)
-    loss_test, rmse_test, mae_test = test(test_features, test_adj, test_bacth_set, model, device)
-    print("Test set results:",
-          "loss= {:.4f}".format(loss_test),
-          'rmse_test= {:.4f}'.format(rmse_test),
-          "mae_test= {:.4f}".format(mae_test))
+    # test_bacth_set = [t for t in test_set][0]
+    for i, test_batch_set in enumerate(test_set):
+        test_g, test_bacth_set = utils.sampling_neighbor(test_bacth_set, G, n_users)
+        test_features, test_adj = utils.get_batches(val_g)
+        loss_test, rmse_test, mae_test = test(test_features, test_adj, test_bacth_set, model, device)
+        writer.add_scalar("Loss_test", loss_test, i+1)
+        writer.add_scalar("RMSE_test", rmse_test, i+1)
+        writer.add_scalar("MAE_test", mae_test, i+1)
+    writer.close()
+    # print("Test set results:",
+    #       "loss= {:.4f}".format(loss_test),
+    #       'rmse_test= {:.4f}'.format(rmse_test),
+    #       "mae_test= {:.4f}".format(mae_test))
