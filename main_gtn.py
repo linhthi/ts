@@ -39,40 +39,28 @@ def get_args():
     return args
 
 
-def train(features, adj, train_set, val_set, fastmode, model, device):
+def train(features, adj, train_set, model, device):
     t = time.time()
     model.train()
     optimizer.zero_grad()
     score = model(features, adj, train_set[:, 0:1].reshape(train_set.shape[0], ), train_set[:, 1:2].reshape(train_set.shape[0], ))
-    loss_train = criterion(score, train_set[:, 3:4].type(torch.FloatTensor).to(device))
+    loss_train = criterion(score, train_set[:, 2:3].type(torch.FloatTensor).to(device))
     rmse_train = torch.sqrt(loss_train)
-    mae_train = mae_loss(score, train_set[:, 3:4].type(torch.FloatTensor).to(device))
+    mae_train = mae_loss(score, train_set[:, 2:3].type(torch.FloatTensor).to(device))
     loss_train.backward()
     optimizer.step()
 
-    loss_val, rmse_val, mae_val = 0, 0, 0
-    if not fastmode:
-        # Evaluate validation set performance separately,
-        # deactivates dropout during validation run.
-        model.eval()
-        score = model(features, adj, val_set[:, 0:1].reshape(val_set.shape[0], ), val_set[:, 1:2].reshape(val_set.shape[0], ))
-        loss_val = criterion(score, val_set[:, 3:4].type(torch.FloatTensor).to(device))
-        rmse_val = torch.sqrt(loss_val)
-        mae_val = mae_loss(score, val_set[:, 3:4].type(torch.FloatTensor).to(device))
     total_time = time.time() - t
-    return loss_train, loss_val, rmse_train, mae_train, rmse_val, mae_val, total_time
+    return loss_train, rmse_train, mae_train, total_time
 
 
 def test(features, adj_test, test_set, model, device):
     model.eval()
     score = model(features, adj_test, test_set[:, 0:1].reshape(len(test_set), ), test_set[:, 1:2].reshape(len(test_set), ))
-    loss_test = criterion(score, test_set[:, 3:4].type(torch.FloatTensor).to(device))
+    loss_test = criterion(score, test_set[:, 2:3].type(torch.FloatTensor).to(device))
     rmse_test = torch.sqrt(loss_test)
-    mae_test = mae_loss(score, test_set[:, 3:4].type(torch.FloatTensor).to(device))
-    print("Test set results:",
-          "loss= {:.4f}".format(loss_test),
-          'rmse_test= {:.4f}'.format(rmse_test),
-          "mae_test= {:.4f}".format(mae_test))
+    mae_test = mae_loss(score, test_set[:, 2:3].type(torch.FloatTensor).to(device))
+    return loss_test, rmse_test, mae_test
 
 
 # Train model
@@ -87,11 +75,11 @@ if __name__ == '__main__':
     # Load data
     print("Loading data...")
 
-    adj, features, train_set, val_set, test_set, G = utils.load_data(args.dataset)
+    adj, features, train_set, val_set, test_set, G, n_users = utils.load_data(args.dataset)
     features = torch.FloatTensor(features)
-    train_set = torch.LongTensor(train_set).to(device)
-    val_set = torch.LongTensor(val_set).to(device)
-    test_set = torch.LongTensor(test_set).to(device)
+    train_set = torch.utils.data.DataLoader(train_set, shuffle=True, batch_size=args.batch_size)
+    val_set = torch.utils.data.DataLoader(val_set, shuffle=True, batch_size=16)
+    test_set = torch.utils.data.DataLoader(test_set, shuffle=True, batch_size=32)
 
     # Model and optimizer
     model = GTN(in_dim=1,
@@ -106,31 +94,39 @@ if __name__ == '__main__':
 
     t_total = time.time()
     for epoch in range(args.epochs):
-        loss_train, loss_val, rmse_train, mae_train, rmse_val, mae_val, tt_time = train(features=features,
-                                                                    adj=adj,
-                                                                    train_set=train_set,
-                                                                    val_set=val_set,
-                                                                    fastmode=args.fastmode,
-                                                                    # fastmode=True,
-                                                                    model=model,
-                                                                    device=device)
-        print("Epoch: {}".format(epoch),
-              "loss_train: {:.4f}".format(loss_train),
-              "loss_val: {:.4f}".format(loss_val),
-              "rmse_train: {:.4f}".format(rmse_train),
-              "mae_train: {:.4f}".format(mae_train),
-              "rmse_val:{:.4f}".format(rmse_val),
-              "mae_val:{:.4f}".format(mae_val),
-              "total_time: {} s".format(tt_time))
+        for i, batch in enumerate(train_set):
+            batch_g, batch_set = utils.sampling_neighbor(batch, G, n_users=n_users)
+            batch_features, batch_adj = utils.get_batches(batch_g)
+            val_batch = [v for v in val_set]
+            val_set_train = val_batch[0]
+            val_g, val_set_train = utils.sampling_neighbor(val_set_train, G, n_users)
+            val_features, val_adj = utils.get_batches(val_g)
+            loss_train, rmse_train, mae_train, tt_time = train(features=batch_features,
+                                                                        adj=batch_adj,
+                                                                        train_set=batch_set,
+                                                                        model=model,
+                                                                        device=device)
+            loss_val, rmse_val, mae_val = test(val_features, val_adj, val_set_train, model, device)
+            if i % (len(train_set) / args.batch_size) == 100:
+                print("Epoch: {0}/{1}".format(epoch, i),
+                      "loss_train: {:.4f}".format(loss_train),
+                      "loss_val: {:.4f}".format(loss_val),
+                      "rmse_train: {:.4f}".format(rmse_train),
+                      "mae_train: {:.4f}".format(mae_train),
+                      "rmse_val:{:.4f}".format(rmse_val),
+                      "mae_val:{:.4f}".format(mae_val),
+                      "total_time: {} s".format(tt_time))
 
     print("Optimization Finished!")
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
     # Testing
     # TODO: add validation edges to predict test edges
-    test(
-        features=features,
-        adj_test=adj,
-        test_set=test_set,
-        model=model,
-        device=device)
+    test_bacth_set = [t for t in test_set][0]
+    test_g, test_bacth_set = utils.sampling_neighbor(test_bacth_set, G, n_users)
+    test_features, test_adj = utils.get_batches(val_g)
+    loss_test, rmse_test, mae_test = test(test_features, test_adj, test_bacth_set, model, device)
+    print("Test set results:",
+          "loss= {:.4f}".format(loss_test),
+          'rmse_test= {:.4f}'.format(rmse_test),
+          "mae_test= {:.4f}".format(mae_test))
