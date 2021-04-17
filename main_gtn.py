@@ -77,8 +77,8 @@ if __name__ == '__main__':
     features = torch.FloatTensor(features)
     num_train = train_set.shape[0]
     train_set = torch.utils.data.DataLoader(train_set, shuffle=True, batch_size=args.batch_size)
-    val_set = torch.utils.data.DataLoader(val_set, shuffle=True, batch_size=16)
-    test_set = torch.utils.data.DataLoader(test_set, shuffle=True, batch_size=32)
+    val_set = torch.utils.data.DataLoader(val_set, shuffle=True, batch_size=args.batch_size)
+    test_set = torch.utils.data.DataLoader(test_set, shuffle=True, batch_size=args.batch_size)
 
     # Model and optimizer
     model = GTN(in_dim=1,
@@ -131,9 +131,9 @@ if __name__ == '__main__':
     # TODO: add validation edges to predict test edges
     # test_bacth_set = [t for t in test_set][0]
     for i, test_batch_set in enumerate(test_set):
-        test_g, test_bacth_set = utils.sampling_neighbor(test_bacth_set, G, n_users)
+        test_g, test_batch_set = utils.sampling_neighbor(test_batch_set, G, n_users)
         test_features, test_adj = utils.get_batches(val_g)
-        loss_test, rmse_test, mae_test = test(test_features, test_adj, test_bacth_set, model, device)
+        loss_test, rmse_test, mae_test = test(test_features, test_adj, test_batch_set, model, device)
         writer.add_scalar("Loss_test", loss_test, i+1)
         writer.add_scalar("RMSE_test", rmse_test, i+1)
         writer.add_scalar("MAE_test", mae_test, i+1)
