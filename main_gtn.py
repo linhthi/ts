@@ -32,15 +32,14 @@ def get_args():
                         help='Dropout rate (1 - keep probability).')
     parser.add_argument('--dataset', default='ciao',
                         help='Dataset name')
-    parser.add_argument('--batch_size', default=32,
-                        help='Dataset name')
+    parser.add_argument('--batch_size', type=int, default=32,
+                        help='Batch size')
     args = parser.parse_args()
     print(args)
     return args
 
 
 def train(features, adj, train_set, model, device):
-    t = time.time()
     model.train()
     optimizer.zero_grad()
     score = model(features, adj, train_set[:, 0:1].reshape(train_set.shape[0], ), train_set[:, 1:2].reshape(train_set.shape[0], ))
@@ -50,8 +49,7 @@ def train(features, adj, train_set, model, device):
     loss_train.backward()
     optimizer.step()
 
-    total_time = time.time() - t
-    return loss_train, rmse_train, mae_train, total_time
+    return loss_train, rmse_train, mae_train
 
 
 def test(features, adj_test, test_set, model, device):
@@ -77,6 +75,7 @@ if __name__ == '__main__':
 
     adj, features, train_set, val_set, test_set, G, n_users = utils.load_data(args.dataset)
     features = torch.FloatTensor(features)
+    num_train = train_set.shape[0]
     train_set = torch.utils.data.DataLoader(train_set, shuffle=True, batch_size=args.batch_size)
     val_set = torch.utils.data.DataLoader(val_set, shuffle=True, batch_size=16)
     test_set = torch.utils.data.DataLoader(test_set, shuffle=True, batch_size=32)
@@ -94,34 +93,36 @@ if __name__ == '__main__':
 
     t_total = time.time()
     for epoch in range(1, args.epochs + 1):
+        loss_train, rmse_train, mae_train, loss_val, rmse_val, mae_val = 0, 0, 0, 0, 0, 0
         for i, batch in enumerate(train_set):
+            start = time.time()
             batch_g, batch_set = utils.sampling_neighbor(batch, G, n_users=n_users)
             batch_features, batch_adj = utils.get_batches(batch_g)
             val_batch = [v for v in val_set]
             val_set_train = val_batch[0]
             val_g, val_set_train = utils.sampling_neighbor(val_set_train, G, n_users)
             val_features, val_adj = utils.get_batches(val_g)
-            loss_train, rmse_train, mae_train, tt_time = train(features=batch_features,
+            loss_train, rmse_train, mae_train = train(features=batch_features,
                                                                         adj=batch_adj,
                                                                         train_set=batch_set,
                                                                         model=model,
                                                                         device=device)
             loss_val, rmse_val, mae_val = test(val_features, val_adj, val_set_train, model, device)
-            if i % 100 == 0:
-                writer.add_scalar('loss_train', loss_train, i*epoch)
-                writer.add_scalar('rmse_train', rmse_train, i*epoch)
-                writer.add_scalar('mae_train', mae_train, i*epoch)
-                writer.add_scalar('rmse_val', rmse_val, i*epoch)
-                writer.add_scalar('mae_val', mae_val, i*epoch)
-            # if i % 100 == 0:
-                # print("Epoch: {0}/{1}".format(epoch, i),
-                #       "loss_train: {:.4f}".format(loss_train),
-                #       "loss_val: {:.4f}".format(loss_val),
-                #       "rmse_train: {:.4f}".format(rmse_train),
-                #       "mae_train: {:.4f}".format(mae_train),
-                #       "rmse_val:{:.4f}".format(rmse_val),
-                #       "mae_val:{:.4f}".format(mae_val),
-                #       "total_time: {} s".format(tt_time))
+            tt_time = time.time() - start
+            if i % 1 == 0:
+                print("Epoch{0}: {1}/{2}".format(epoch, i, num_train // args.batch_size),
+                      "loss_train: {:.4f}".format(loss_train),
+                      "loss_val: {:.4f}".format(loss_val),
+                      "rmse_train: {:.4f}".format(rmse_train),
+                      "mae_train: {:.4f}".format(mae_train),
+                      "rmse_val:{:.4f}".format(rmse_val),
+                      "mae_val:{:.4f}".format(mae_val),
+                      "total_time: {} s".format(tt_time))
+        writer.add_scalar('loss_train', loss_train, epoch)
+        writer.add_scalar('rmse_train', rmse_train, epoch)
+        writer.add_scalar('mae_train', mae_train, epoch)
+        writer.add_scalar('rmse_val', rmse_val, epoch)
+        writer.add_scalar('mae_val', mae_val, epoch)
 
     print("Optimization Finished!")
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))

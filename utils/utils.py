@@ -206,9 +206,9 @@ def sampling_neighbor(batch, full_graph, n_users):
         while cnt_friend < len(friends) and cnt_friend < 3:
             friend_node = user + num_node_friends + len(users_id) + len(items_id)
             G.add_node(friend_node, label='user')
+            friend = friends[cnt_friend]
             cnt_friend += 1
             num_node_friends += 1
-            friend = friends[cnt_friend]
             items_friend_bought = [n for n in full_graph.neighbors(friend) if n > n_users]
             cnt_item = 0
             while cnt_item < len(items_friend_bought) and cnt_item < 3:
