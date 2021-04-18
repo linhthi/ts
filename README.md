@@ -56,7 +56,7 @@ We use 60/20/20 for training, validation, test set
 |  NeuMF | 1.0439 |0.8052|
 |  GraphRec | 1.0090 |0.7834|
 |  GCN | 1.0605 |0.8270|
-|  GTN | 0.9732 ||
+|  GTN | 0.9732 |0.7641|
 
 
 **Epinions Dataset**
@@ -67,7 +67,7 @@ We use 60/20/20 for training, validation, test set
 |  NeuMF | 1.1411 |0.9072|
 |  GraphRec | 1.1078 |0.8524|
 |  GCN | 1.1680 |0.8956|
-|  GTN | 1.0139 ||
+|  GTN | 1.0139 |0.8436|
 
 
 ### Reference: 
