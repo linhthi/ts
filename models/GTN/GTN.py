@@ -38,7 +38,8 @@ class GTN(nn.Module):
         h = F.dropout(h, self.dropout, training=self.training)
         h = F.relu(self.gc2(h, adj))
         h = F.dropout(h, self.dropout, training=self.training)
-        h = self.fc1(h).reshape(x.shape[0], 1, self.out_dim) # Node embedding
+        # h = self.fc1(h).reshape(x.shape[0], 1, self.out_dim) # Node embedding
+        h = h.reshape(x.shape[0], 1, self.out_dim)
         # TODO: add transformer layer below
         h = self.transformer(h).reshape(x.shape[0], self.out_dim)
         h_uv = torch.cat((h[nodes_u], h[nodes_v]), 1)

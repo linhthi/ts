@@ -6,3 +6,5 @@
 /.vscode
 *.h5
 *.out
+/images
+/results

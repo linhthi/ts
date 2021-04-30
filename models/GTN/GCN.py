@@ -38,7 +38,7 @@ class GCN(nn.Module):
         h = F.dropout(h, self.dropout, training=self.training)
         h = F.relu(self.gc2(h, adj))
         h = F.dropout(h, self.dropout, training=self.training)
-        h = self.fc1(h) # Node embedding
+        # h = self.fc1(h) # Node embedding
         # TODO: add transformer layer below
         h_uv = torch.cat((h[nodes_u], h[nodes_v]), 1)
         score = self.fc2(h_uv)
