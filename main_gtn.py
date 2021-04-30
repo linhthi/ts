@@ -121,7 +121,7 @@ if __name__ == '__main__':
             val_set_train = val_batch[0]
             val_g, val_set_train = utils.sampling_neighbor(val_set_train, G, n_users)
             val_features, val_adj = utils.get_batches(val_g)
-            
+
             gtn_loss_val, gtn_rmse_val, gtn_mae_val = test(val_features, val_adj, val_set_train, model_gtn, device)
             gcn_loss_val, gcn_rmse_val, gcn_mae_val = test(val_features, val_adj, val_set_train, model_gcn, device)
 
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     # TODO: add validation edges to predict test edges
     for i, test_batch_set in enumerate(test_set):
         test_g, test_batch_set = utils.sampling_neighbor(test_batch_set, G, n_users)
-        test_features, test_adj = utils.get_batches(test_batch_set)
+        test_features, test_adj = utils.get_batches(test_g)
 
         gtn_loss_test, gtn_rmse_test, gtn_mae_test = test(test_features, test_adj, test_batch_set, model_gtn, device)
         gcn_loss_test, gcn_rmse_test, gcn_mae_test = test(test_features, test_adj, test_batch_set, model_gcn, device)
