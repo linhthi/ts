@@ -19,7 +19,7 @@ class GCN(nn.Module):
         """
         super(GCN, self).__init__()
         self.gc1 = GraphConvolution(in_dim, hidden_dim)
-        self.gc2 = GraphConvolution(hidden_dim, hidden_dim)
+        self.gc2 = GraphConvolution(hidden_dim, out_dim)
         self.fc1 = nn.Linear(hidden_dim, out_dim)
         self.fc2 = nn.Linear(out_dim*2, out_dim)
         self.dropout = dropout
