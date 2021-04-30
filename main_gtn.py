@@ -9,6 +9,7 @@ import torch.optim as optim
 import torch.utils.data
 
 from models.GTN.GTN import GTN
+from models.GTN.GCN import GCN
 import utils.utils as utils
 from torch.utils.tensorboard import SummaryWriter
 
@@ -39,10 +40,11 @@ def get_args():
     return args
 
 
-def train(features, adj, train_set, model, device):
+def train(features, adj, train_set, model, device, optimizer):
     model.train()
     optimizer.zero_grad()
-    score = model(features, adj, train_set[:, 0:1].reshape(train_set.shape[0], ), train_set[:, 1:2].reshape(train_set.shape[0], ))
+    score = model(features, adj, train_set[:, 0:1].reshape(train_set.shape[0], ),
+                  train_set[:, 1:2].reshape(train_set.shape[0], ))
     loss_train = criterion(score, train_set[:, 2:3].type(torch.FloatTensor).to(device))
     rmse_train = torch.sqrt(loss_train)
     mae_train = mae_loss(score, train_set[:, 2:3].type(torch.FloatTensor).to(device))
@@ -54,7 +56,8 @@ def train(features, adj, train_set, model, device):
 
 def test(features, adj_test, test_set, model, device):
     model.eval()
-    score = model(features, adj_test, test_set[:, 0:1].reshape(len(test_set), ), test_set[:, 1:2].reshape(len(test_set), ))
+    score = model(features, adj_test, test_set[:, 0:1].reshape(len(test_set), ),
+                  test_set[:, 1:2].reshape(len(test_set), ))
     loss_test = criterion(score, test_set[:, 2:3].type(torch.FloatTensor).to(device))
     rmse_test = torch.sqrt(loss_test)
     mae_test = mae_loss(score, test_set[:, 2:3].type(torch.FloatTensor).to(device))
@@ -81,64 +84,75 @@ if __name__ == '__main__':
     test_set = torch.utils.data.DataLoader(test_set, shuffle=True, batch_size=args.batch_size)
 
     # Model and optimizer
-    model = GTN(in_dim=1,
-                hidden_dim=args.hidden,
-                out_dim=1,
-                dropout=args.dropout)
-    print(model.__repr__())
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    model_gtn = GTN(in_dim=1, hidden_dim=args.hidden, out_dim=1, dropout=args.dropout)
+    model_gcn = GCN(in_dim=1, hidden_dim=args.hidden, out_dim=1, dropout=args.dropout)
+
+    print(model_gtn.__repr__())
+    print(model_gcn.__repr__())
+
+    optimizer_gtn = optim.Adam(model_gtn.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer_gcn = optim.Adam(model_gcn.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+
     criterion = nn.MSELoss()
     mae_loss = nn.L1Loss()
-    model.to(device)
+    model_gtn.to(device)
 
     t_total = time.time()
     for epoch in range(1, args.epochs + 1):
-        loss_train, rmse_train, mae_train, loss_val, rmse_val, mae_val = 0, 0, 0, 0, 0, 0
+        num_iter = num_train // args.batch_size
         for i, batch in enumerate(train_set):
             start = time.time()
             batch_g, batch_set = utils.sampling_neighbor(batch, G, n_users=n_users)
             batch_features, batch_adj = utils.get_batches(batch_g)
+
+            gtn_loss_train, gtn_rmse_train, gtn_mae_train = train(features=batch_features,
+                                                                  adj=batch_adj,
+                                                                  train_set=batch_set,
+                                                                  model=model_gtn,
+                                                                  device=device,
+                                                                  optimizer=optimizer_gtn)
+            gcn_loss_train, gcn_rmse_train, gcn_mae_train = train(features=batch_features,
+                                                                  adj=batch_adj,
+                                                                  train_set=batch_set,
+                                                                  model=model_gcn,
+                                                                  device=device,
+                                                                  optimizer=optimizer_gcn)
             val_batch = [v for v in val_set]
             val_set_train = val_batch[0]
             val_g, val_set_train = utils.sampling_neighbor(val_set_train, G, n_users)
             val_features, val_adj = utils.get_batches(val_g)
-            loss_train, rmse_train, mae_train = train(features=batch_features,
-                                                                        adj=batch_adj,
-                                                                        train_set=batch_set,
-                                                                        model=model,
-                                                                        device=device)
-            loss_val, rmse_val, mae_val = test(val_features, val_adj, val_set_train, model, device)
-            tt_time = time.time() - start
-            if i % 1 == 0:
-                print("Epoch{0}: {1}/{2}".format(epoch, i, num_train // args.batch_size),
-                      "loss_train: {:.4f}".format(loss_train),
-                      "loss_val: {:.4f}".format(loss_val),
-                      "rmse_train: {:.4f}".format(rmse_train),
-                      "mae_train: {:.4f}".format(mae_train),
-                      "rmse_val:{:.4f}".format(rmse_val),
-                      "mae_val:{:.4f}".format(mae_val),
-                      "total_time: {} s".format(tt_time))
-        writer.add_scalar('loss_train', loss_train, epoch)
-        writer.add_scalar('rmse_train', rmse_train, epoch)
-        writer.add_scalar('mae_train', mae_train, epoch)
-        writer.add_scalar('rmse_val', rmse_val, epoch)
-        writer.add_scalar('mae_val', mae_val, epoch)
+            
+            gtn_loss_val, gtn_rmse_val, gtn_mae_val = test(val_features, val_adj, val_set_train, model_gtn, device)
+            gcn_loss_val, gcn_rmse_val, gcn_mae_val = test(val_features, val_adj, val_set_train, model_gcn, device)
+
+            writer.add_scalar('GTN/loss_train', gtn_loss_train, i + epoch * num_iter)
+            writer.add_scalar('GTN/rmse_train', gtn_rmse_train, i + epoch * num_iter)
+            writer.add_scalar('GTN/mae_train', gtn_mae_train, i + epoch * num_iter)
+            writer.add_scalar('GTN/rmse_val', gtn_rmse_val, i + epoch * num_iter)
+            writer.add_scalar('GTN/mae_val', gtn_mae_val, i + epoch * num_iter)
+            writer.add_scalar('GCN/loss_train', gcn_loss_train, i + epoch * num_iter)
+            writer.add_scalar('GCN/rmse_train', gcn_rmse_train, i + epoch * num_iter)
+            writer.add_scalar('GCN/mae_train', gcn_mae_train, i + epoch * num_iter)
+            writer.add_scalar('GCN/rmse_val', gcn_rmse_val, i + epoch * num_iter)
+            writer.add_scalar('GCN/mae_val', gcn_mae_val, i + epoch * num_iter)
 
     print("Optimization Finished!")
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
     # Testing
     # TODO: add validation edges to predict test edges
-    # test_bacth_set = [t for t in test_set][0]
     for i, test_batch_set in enumerate(test_set):
         test_g, test_batch_set = utils.sampling_neighbor(test_batch_set, G, n_users)
-        test_features, test_adj = utils.get_batches(val_g)
-        loss_test, rmse_test, mae_test = test(test_features, test_adj, test_batch_set, model, device)
-        writer.add_scalar("Loss_test", loss_test, i+1)
-        writer.add_scalar("RMSE_test", rmse_test, i+1)
-        writer.add_scalar("MAE_test", mae_test, i+1)
+        test_features, test_adj = utils.get_batches(test_batch_set)
+
+        gtn_loss_test, gtn_rmse_test, gtn_mae_test = test(test_features, test_adj, test_batch_set, model_gtn, device)
+        gcn_loss_test, gcn_rmse_test, gcn_mae_test = test(test_features, test_adj, test_batch_set, model_gcn, device)
+
+        writer.add_scalar("GTN/Loss_test", gtn_loss_test, i)
+        writer.add_scalar("GTN/RMSE_test", gtn_rmse_test, i)
+        writer.add_scalar("GTN/MAE_test", gtn_mae_test, i)
+        writer.add_scalar("GCN/Loss_test", gcn_loss_test, i)
+        writer.add_scalar("GCN/RMSE_test", gcn_rmse_test, i)
+        writer.add_scalar("GCN/MAE_test", gcn_mae_test, i)
+
     writer.close()
-    # print("Test set results:",
-    #       "loss= {:.4f}".format(loss_test),
-    #       'rmse_test= {:.4f}'.format(rmse_test),
-    #       "mae_test= {:.4f}".format(mae_test))
