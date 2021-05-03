@@ -43,6 +43,8 @@ def get_args():
 def train(features, adj, train_set, model, device, optimizer):
     model.train()
     optimizer.zero_grad()
+    features = features.to(device)
+    adj = adj.to(device)
     score = model(features, adj, train_set[:, 0:1].reshape(train_set.shape[0], ),
                   train_set[:, 1:2].reshape(train_set.shape[0], ))
     loss_train = criterion(score, train_set[:, 2:3].type(torch.FloatTensor).to(device))
@@ -56,6 +58,8 @@ def train(features, adj, train_set, model, device, optimizer):
 
 def test(features, adj_test, test_set, model, device):
     model.eval()
+    features = features.to(device)
+    adj_test = adj_test.to(device)
     score = model(features, adj_test, test_set[:, 0:1].reshape(len(test_set), ),
                   test_set[:, 1:2].reshape(len(test_set), ))
     loss_test = criterion(score, test_set[:, 2:3].type(torch.FloatTensor).to(device))
@@ -77,7 +81,7 @@ if __name__ == '__main__':
     print("Loading data...")
 
     adj, features, train_set, val_set, test_set, G, n_users = utils.load_data(args.dataset)
-    features = torch.FloatTensor(features)
+    features = torch.FloatTensor(features).to(device)
     num_train = train_set.shape[0]
     train_set = torch.utils.data.DataLoader(train_set, shuffle=True, batch_size=args.batch_size)
     val_set = torch.utils.data.DataLoader(val_set, shuffle=True, batch_size=args.batch_size)
@@ -96,24 +100,25 @@ if __name__ == '__main__':
     criterion = nn.MSELoss()
     mae_loss = nn.L1Loss()
     model_gtn.to(device)
+    model_gcn.to(device)
 
     t_total = time.time()
     for epoch in range(args.epochs):
         num_iter = num_train // args.batch_size
-        gtn_loss, gtn_rmse_train, gtn_mae_train = 0.0, 0.0, 0.0
-        gcn_loss, gcn_rmse_train, gcn_mae_train = 0.0, 0.0, 0.0
+        gtn_loss_train, gtn_rmse_train, gtn_mae_train = 0.0, 0.0, 0.0
+        gcn_loss_train, gcn_rmse_train, gcn_mae_train = 0.0, 0.0, 0.0
         for i, batch in enumerate(train_set):
             start = time.time()
             batch_g, batch_set = utils.sampling_neighbor(batch, G, n_users=n_users)
             batch_features, batch_adj = utils.get_batches(batch_g)
 
-            gtn_loss, gtn_rmse_train, gtn_mae_train = train(features=batch_features,
+            gtn_loss_train, gtn_rmse_train, gtn_mae_train = train(features=batch_features,
                                                                   adj=batch_adj,
                                                                   train_set=batch_set,
                                                                   model=model_gtn,
                                                                   device=device,
                                                                   optimizer=optimizer_gtn)
-            gcn_loss, gcn_rmse_train, gcn_mae_train = train(features=batch_features,
+            gcn_loss_train, gcn_rmse_train, gcn_mae_train = train(features=batch_features,
                                                                   adj=batch_adj,
                                                                   train_set=batch_set,
                                                                   model=model_gcn,

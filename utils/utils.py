@@ -181,12 +181,14 @@ def get_idx(in_set, n_users):
     return np.array(idx)
 
 
-def sampling_neighbor(batch, full_graph, n_users):
+def sampling_neighbor(batch, full_graph, n_users, num_neighbors=10, num_items=10):
     """
     Sampling neighbor nodes with users and items from full graph
         @param batch:
         @param full_graph:
         @param n_users:
+        @param num_neighbors: number of neighbor's node
+        @param num_items: limitation of item that neighbor have bought
     """
     users_id = np.unique(batch[:, 0:1]).tolist()
     items_id = np.unique(batch[:, 1:2]).tolist()
@@ -203,7 +205,7 @@ def sampling_neighbor(batch, full_graph, n_users):
         cnt_friend = 0
         friends = [n for n in full_graph.neighbors(user) if n <= n_users]
 
-        while cnt_friend < len(friends) and cnt_friend < 3:
+        while cnt_friend < len(friends) and cnt_friend < num_neighbors:
             friend_node = user + num_node_friends + len(users_id) + len(items_id)
             G.add_node(friend_node, label='user')
             friend = friends[cnt_friend]
@@ -211,13 +213,13 @@ def sampling_neighbor(batch, full_graph, n_users):
             num_node_friends += 1
             items_friend_bought = [n for n in full_graph.neighbors(friend) if n > n_users]
             cnt_item = 0
-            while cnt_item < len(items_friend_bought) and cnt_item < 3:
+            while cnt_item < len(items_friend_bought) and cnt_item < num_items:
                 item_node = user + 4 * len(users_id) + len(items_id) + num_node_items_friend_bought
                 G.add_node(item_node, label='item')
-                cnt_item += 1
-                num_node_items_friend_bought += 1
                 item = items_friend_bought[cnt_item]
                 G.add_edge(friend_node, item_node, rating=full_graph[friend][item])
+                cnt_item += 1
+                num_node_items_friend_bought += 1
 
     cnt = 0
     for item in range(len(users_id), len(users_id) + len(items_id)):
