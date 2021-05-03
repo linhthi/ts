@@ -21,7 +21,8 @@ class GTN(nn.Module):
         self.gc1 = GraphConvolution(in_dim, hidden_dim)
         self.gc2 = GraphConvolution(hidden_dim, out_dim)
         self.fc2 = nn.Linear(out_dim*2, out_dim)
-        self.transformer = nn.TransformerEncoderLayer(d_model=in_dim, nhead=n_head, dim_feedforward=hidden_dim, dropout=dropout)
+        encoder_transformer_layer = nn.TransformerEncoderLayer(d_model=in_dim, nhead=n_head, dim_feedforward=hidden_dim, dropout=dropout)
+        self.transformer = nn.TransformerEncoder(encoder_layer=encoder_transformer_layer, num_layers=1)
         self.dropout = dropout
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -37,10 +38,10 @@ class GTN(nn.Module):
         h = F.dropout(h, self.dropout, training=self.training)
         h = F.relu(self.gc2(h, adj))
         h = F.dropout(h, self.dropout, training=self.training)
-        # h = self.fc1(h).reshape(x.shape[0], 1, self.out_dim) # Node embedding
-        h = h.reshape(x.shape[0], 1, self.out_dim)
-        # TODO: add transformer layer below
-        h = self.transformer(h).reshape(x.shape[0], self.out_dim)
+        # Reshaping into [num_nodes, num_heads, feat_dim] to get projections for multi-head attention
+        h = h.view(-1, 1, self.out_dim)
+        h = self.transformer(h)
+        h = h.view(-1, self.out_dim)
         h_uv = torch.cat((h[nodes_u], h[nodes_v]), 1)
         score = self.fc2(h_uv)
         return score

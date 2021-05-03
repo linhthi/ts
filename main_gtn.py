@@ -98,43 +98,50 @@ if __name__ == '__main__':
     model_gtn.to(device)
 
     t_total = time.time()
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(args.epochs):
         num_iter = num_train // args.batch_size
+        gtn_loss, gtn_rmse_train, gtn_mae_train = 0.0, 0.0, 0.0
+        gcn_loss, gcn_rmse_train, gcn_mae_train = 0.0, 0.0, 0.0
         for i, batch in enumerate(train_set):
             start = time.time()
             batch_g, batch_set = utils.sampling_neighbor(batch, G, n_users=n_users)
             batch_features, batch_adj = utils.get_batches(batch_g)
 
-            gtn_loss_train, gtn_rmse_train, gtn_mae_train = train(features=batch_features,
+            gtn_loss, gtn_rmse_train, gtn_mae_train = train(features=batch_features,
                                                                   adj=batch_adj,
                                                                   train_set=batch_set,
                                                                   model=model_gtn,
                                                                   device=device,
                                                                   optimizer=optimizer_gtn)
-            gcn_loss_train, gcn_rmse_train, gcn_mae_train = train(features=batch_features,
+            gcn_loss, gcn_rmse_train, gcn_mae_train = train(features=batch_features,
                                                                   adj=batch_adj,
                                                                   train_set=batch_set,
                                                                   model=model_gcn,
                                                                   device=device,
                                                                   optimizer=optimizer_gcn)
-            val_batch = [v for v in val_set]
-            val_set_train = val_batch[0]
-            val_g, val_set_train = utils.sampling_neighbor(val_set_train, G, n_users)
+
+        # Validate
+        gtn_loss_val, gtn_rmse_val, gtn_mae_val = 0.0, 0.0, 0.0
+        gcn_loss_val, gcn_rmse_val, gcn_mae_val = 0.0, 0.0, 0.0
+        for i, val_batch in enumerate(val_set):
+            val_g, val_batch_set = utils.sampling_neighbor(val_batch, G, n_users)
             val_features, val_adj = utils.get_batches(val_g)
 
-            gtn_loss_val, gtn_rmse_val, gtn_mae_val = test(val_features, val_adj, val_set_train, model_gtn, device)
-            gcn_loss_val, gcn_rmse_val, gcn_mae_val = test(val_features, val_adj, val_set_train, model_gcn, device)
+            gtn_loss_val, gtn_rmse_val, gtn_mae_val = test(val_features, val_adj, val_batch_set, model_gtn, device)
+            gcn_loss_val, gcn_rmse_val, gcn_mae_val = test(val_features, val_adj, val_batch_set, model_gcn, device)
 
-            writer.add_scalar('GTN/loss_train', gtn_loss_train, i + epoch * num_iter)
-            writer.add_scalar('GTN/rmse_train', gtn_rmse_train, i + epoch * num_iter)
-            writer.add_scalar('GTN/mae_train', gtn_mae_train, i + epoch * num_iter)
-            writer.add_scalar('GTN/rmse_val', gtn_rmse_val, i + epoch * num_iter)
-            writer.add_scalar('GTN/mae_val', gtn_mae_val, i + epoch * num_iter)
-            writer.add_scalar('GCN/loss_train', gcn_loss_train, i + epoch * num_iter)
-            writer.add_scalar('GCN/rmse_train', gcn_rmse_train, i + epoch * num_iter)
-            writer.add_scalar('GCN/mae_train', gcn_mae_train, i + epoch * num_iter)
-            writer.add_scalar('GCN/rmse_val', gcn_rmse_val, i + epoch * num_iter)
-            writer.add_scalar('GCN/mae_val', gcn_mae_val, i + epoch * num_iter)
+        writer.add_scalar('GTN/loss_train', gtn_loss_train, epoch)
+        writer.add_scalar('GTN/rmse_train', gtn_rmse_train, epoch)
+        writer.add_scalar('GTN/mae_train', gtn_mae_train, epoch)
+        writer.add_scalar('GTN/loss_val', gtn_loss_val, epoch)
+        writer.add_scalar('GTN/rmse_val', gtn_rmse_val, epoch)
+        writer.add_scalar('GTN/mae_val', gtn_mae_val, epoch)
+        writer.add_scalar('GCN/loss_train', gcn_loss_train, epoch)
+        writer.add_scalar('GCN/rmse_train', gcn_rmse_train, epoch)
+        writer.add_scalar('GCN/mae_train', gcn_mae_train, epoch)
+        writer.add_scalar('GCN/loss_val', gcn_loss_val, epoch)
+        writer.add_scalar('GCN/rmse_val', gcn_rmse_val, epoch)
+        writer.add_scalar('GCN/mae_val', gcn_mae_val, i + epoch)
 
     print("Optimization Finished!")
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
