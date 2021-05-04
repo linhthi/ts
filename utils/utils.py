@@ -166,9 +166,9 @@ def get_batches(graph):
     nodes = graph.nodes.data()
     features = []
     for node in nodes:
-        label = node[1].get('label')
-        label_const = 1 if label == 'user' else 2
-        features.append([label_const])
+        id = node[1].get('id')
+        # label_const = 1 if label == 'user' else 2
+        features.append([int(id)])
     return torch.Tensor(features), adj
 
 
@@ -235,14 +235,3 @@ def sampling_neighbor(batch, full_graph, n_users, num_neighbors=8, num_items=4):
         train_set.append([users_map.get(int(u)), items_map.get(int(v)), data[3]])
 
     return G, torch.LongTensor(train_set)
-
-# Test
-if __name__ == '__main__':
-    training, vali, test, n_users, n_items = split_rating_data('ciao')
-    # trust_data = load_trust_network('ciao')
-    # u, v = get_nodes('ciao')
-    # G = gen_graph(training, trust_data, u, v)
-    # A = nx.to_scipy_sparse_matrix(G)
-    # A = get_adj(A)
-    # print(A)
-    load_data('ciao')
