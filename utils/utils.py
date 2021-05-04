@@ -181,7 +181,7 @@ def get_idx(in_set, n_users):
     return np.array(idx)
 
 
-def sampling_neighbor(batch, full_graph, n_users, num_neighbors=10, num_items=10):
+def sampling_neighbor(batch, full_graph, n_users, num_neighbors=8, num_items=4):
     """
     Sampling neighbor nodes with users and items from full graph
         @param batch:

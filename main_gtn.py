@@ -35,6 +35,8 @@ def get_args():
                         help='Dataset name')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size')
+    parser.add_argument('--num_neighbor', type=int, default=8)
+    parser.add_argument('--num_item_neighbor', type=int, default=4)
     args = parser.parse_args()
     print(args)
     return args
@@ -109,7 +111,10 @@ if __name__ == '__main__':
         gcn_loss_train, gcn_rmse_train, gcn_mae_train = 0.0, 0.0, 0.0
         for i, batch in enumerate(train_set):
             start = time.time()
-            batch_g, batch_set = utils.sampling_neighbor(batch, G, n_users=n_users)
+            batch_g, batch_set = utils.sampling_neighbor(batch, G,
+                                                         n_users=n_users,
+                                                         num_neighbors=args.num_neighbor,
+                                                         num_items=args.num_item_neighbor)
             batch_features, batch_adj = utils.get_batches(batch_g)
 
             gtn_loss_train, gtn_rmse_train, gtn_mae_train = train(features=batch_features,
@@ -147,6 +152,17 @@ if __name__ == '__main__':
         writer.add_scalar('GCN/loss_val', gcn_loss_val, epoch)
         writer.add_scalar('GCN/rmse_val', gcn_rmse_val, epoch)
         writer.add_scalar('GCN/mae_val', gcn_mae_val, i + epoch)
+
+        if epoch % 10 == 0:
+            name = 'train/state_dict_' + str(epoch) + '_.pth'
+
+            torch.save({
+                'GCN_state_dict': model_gcn.state_dict(),
+                'GTN_state_dict': model_gtn.state_dict(),
+                'optimizer_gcn': optimizer_gcn.state_dict(),
+                'optimizer_gtn': optimizer_gtn.state_dict(),
+                "epoch": epoch,
+            }, name)
 
     print("Optimization Finished!")
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
