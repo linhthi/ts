@@ -32,16 +32,19 @@ class GTN(nn.Module):
 
         @param x: node features
         @param adj: adjacency matrix
-        @return: node embedding
+        @param nodes_u: users_id
+        @param nodes_v: items_id
+        @return: predict scores users_id give to items_id
         """
         h = F.relu(self.gc1(x, adj))
         h = F.dropout(h, self.dropout, training=self.training)
         h = F.relu(self.gc2(h, adj))
         h = F.dropout(h, self.dropout, training=self.training)
+
         # Reshaping into [num_nodes, num_heads, feat_dim] to get projections for multi-head attention
         h = h.view(-1, 1, self.out_dim)
         h = self.transformer(h)
         h = h.view(-1, self.out_dim)
         h_uv = torch.cat((h[nodes_u], h[nodes_v]), 1)
-        score = self.fc2(h_uv)
-        return score
+        scores = self.fc2(h_uv)
+        return scores
