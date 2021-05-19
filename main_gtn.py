@@ -95,13 +95,13 @@ if __name__ == '__main__':
     mae_loss = nn.L1Loss()
 
     model_gtn = GTN(in_dim=1, hidden_dim=args.hidden, out_dim=1, dropout=args.dropout,
-                    num_GC_layers=args.num_GC_layers)
+                    num_GC_layers=args.num_gc_layers)
     print(model_gtn.__repr__())
     optimizer_gtn = optim.Adam(model_gtn.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     model_gtn.to(device)
 
     model_gcn = GCN(in_dim=1, hidden_dim=args.hidden, out_dim=1, dropout=args.dropout,
-                    num_GC_layers=args.num_GC_layers)
+                    num_GC_layers=args.num_gc_layers)
     print(model_gcn.__repr__())
     optimizer_gcn = optim.Adam(model_gcn.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     model_gcn.to(device)
