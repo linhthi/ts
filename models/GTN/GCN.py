@@ -9,23 +9,27 @@ class GCN(nn.Module):
     Simple Graph Convolutional Networks for Node Embedding with 2 Graph Convolution layers
     """
 
-    def __init__(self, in_dim, hidden_dim, out_dim, dropout):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_GC_layers, dropout):
         """
 
         @param in_dim: dimension of input features
         @param hidden_dim: dimension of hidden layer
         @param out_dim: dimension of output
+        @param num_GC_layers: number of Graph Convolution layers with value: 1 or 2
         @param dropout: dropout layer
         """
         super(GCN, self).__init__()
-        self.gc1 = GraphConvolution(in_dim, hidden_dim)
-        self.gc2 = GraphConvolution(hidden_dim, out_dim)
-        self.fc1 = nn.Linear(hidden_dim, out_dim)
-        self.fc2 = nn.Linear(out_dim*2, out_dim)
-        self.dropout = dropout
         self.in_dim = in_dim
         self.hidden_dim = hidden_dim
         self.out_dim = out_dim
+        self.num_GC_layers = num_GC_layers
+        self.dropout = dropout
+        if self.num_GC_layers == 1:
+            self.gc1 = GraphConvolution(in_dim, out_dim)
+        if self.num_GC_layers == 2:
+            self.gc1 = GraphConvolution(in_dim, hidden_dim)
+            self.gc2 = GraphConvolution(hidden_dim, out_dim)
+        self.fc = nn.Linear(out_dim * 2, out_dim)
 
     def forward(self, x, adj, nodes_u, nodes_v):
         """
@@ -36,12 +40,11 @@ class GCN(nn.Module):
         """
         h = F.relu(self.gc1(x, adj))
         h = F.dropout(h, self.dropout, training=self.training)
-        h = F.relu(self.gc2(h, adj))
-        h = F.dropout(h, self.dropout, training=self.training)
-        # h = self.fc1(h) # Node embedding
-        # TODO: add transformer layer below
+        if self.num_GC_layers == 2:
+            h = F.relu(self.gc2(h, adj))
+            h = F.dropout(h, self.dropout, training=self.training)
         h_uv = torch.cat((h[nodes_u], h[nodes_v]), 1)
-        score = self.fc2(h_uv)
-        return score
+        scores = self.fc(h_uv)
+        return scores
 
 

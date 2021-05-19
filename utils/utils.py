@@ -11,8 +11,8 @@ def split_rating_data(dataset):
     """
     Load rating_data from file csv, rating.csv includes user_id, product_id, category_id, rating, helpfulness
     and then split it to train, valid and test set.
-    @param dataset:
-    @return:
+    @param dataset: dataset's name. Ex: 'ciao'.
+    @return: train, vali, test, n_user, n_items
     """
     file_path = f'data/{dataset}/rating.csv'
     df = pd.read_csv(file_path)
@@ -28,6 +28,11 @@ def split_rating_data(dataset):
 
 
 def load_rating(dataset):
+    """
+    Load data from rating csv file
+    @param dataset: dataset's name. Ex: 'ciao'.
+    @return:
+    """
     file_path = f'data/{dataset}/rating.csv'
     return pd.read_csv(file_path).values
 
@@ -35,7 +40,7 @@ def load_rating(dataset):
 def load_trust_network(dataset):
     """
     Load trust network data from file csv
-    @param dataset:
+    @param dataset: dataset's name. Ex: 'ciao'
     return:
     """
     file_path = f'data/{dataset}/trustnetwork.csv'
@@ -45,10 +50,10 @@ def load_trust_network(dataset):
 def gen_graph(rating_data, trust_data, n_users, n_items):
     """
     Generate Graph from rating and trust network data
-    @param rating_data:
-    @param trust_data:
-    @param n_users:
-    @param n_items:
+    @param rating_data: contain user_id, item_id, category_id, rating, helpfulness
+    @param trust_data: contain user_id, user_trust_id
+    @param n_users: number of users in graph
+    @param n_items: number of items in graph
     @return: Directed graph networkx
     """
     G = nx.DiGraph()
@@ -71,8 +76,8 @@ def gen_graph(rating_data, trust_data, n_users, n_items):
 def get_nodes(dataset):
     """
     Get user, item nodes
-    @param dataset:
-    @return:
+    @param dataset: dataset's name
+    @return: users, items type np.array
     """
     file_path = f'data/{dataset}/rating.csv'
     df = pd.read_csv(file_path)
@@ -116,6 +121,11 @@ def to_sparse(x):
 
 
 def get_adjacency(G):
+    """
+    Get sparse adjacency matrix from graph G
+    @param G: networkx Graph
+    @return: sparse adjacency matrix
+    """
     return nx.to_scipy_sparse_matrix(G)
 
 
@@ -162,17 +172,28 @@ def load_data(dataset):
 
 
 def get_batches(graph):
+    """
+    Get features of nodes from subgraph
+    @param graph: subgraph: type networkx Graph
+    @return: Tensor
+    """
     adj = get_adj(get_adjacency(graph))
     nodes = graph.nodes.data()
     features = []
     for node in nodes:
         id = node[1].get('id')
         # label_const = 1 if label == 'user' else 2
-        features.append([int(id)])
+        features.append([id])
     return torch.Tensor(features), adj
 
 
 def get_idx(in_set, n_users):
+    """
+    Get index list from set node
+    @param in_set:
+    @param n_users: number of users in full-graph
+    @return: index list: type nparray
+    """
     users = np.unique(in_set[:, 0:1])
     items = np.unique(in_set[:, 1:2])
     a = n_users * np.ones(items.shape[0])
@@ -183,10 +204,10 @@ def get_idx(in_set, n_users):
 
 def sampling_neighbor(batch, full_graph, n_users, num_neighbors=8, num_items=4):
     """
-    Sampling neighbor nodes with users and items from full graph
-        @param batch:
-        @param full_graph:
-        @param n_users:
+    Sampling neighbor nodes with users and items from full graph and reindex nodes
+        @param batch: contain item, user, rating for training
+        @param full_graph: G networkx graph
+        @param n_users: total user in graph G
         @param num_neighbors: number of neighbor's node
         @param num_items: limitation of item that neighbor have bought
     """

@@ -99,7 +99,7 @@ if __name__ == '__main__':
     optimizer_gtn = optim.Adam(model_gtn.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     model_gtn.to(device)
 
-    model_gcn = GCN(in_dim=args.embedding_dim, hidden_dim=args.hidden, out_dim=1, dropout=args.dropout)
+    model_gcn = GCN(in_dim=args.embedding_dim, hidden_dim=args.hidden, out_dim=1, dropout=args.dropout, num_GC_layers=1)
     print(model_gcn.__repr__())
     optimizer_gcn = optim.Adam(model_gcn.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     model_gcn.to(device)
