@@ -21,7 +21,7 @@ class GTN(nn.Module):
         super(GTN, self).__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
-        self.n_head - n_head
+        self.n_head = n_head
         self.dropout = dropout
         self.num_GC_layers = num_GC_layers
         if self.num_GC_layers == 1:
