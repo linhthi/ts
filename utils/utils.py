@@ -181,9 +181,10 @@ def get_batches(graph):
     nodes = graph.nodes.data()
     features = []
     for node in nodes:
-        id = node[1].get('id')
-        # label_const = 1 if label == 'user' else 2
-        features.append([id])
+        # id = node[1].get('id')
+        label = node[1].get('label')
+        label_const = 1 if label == 'user' else 2
+        features.append([label_const])
     return torch.Tensor(features), adj
 
 
