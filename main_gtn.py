@@ -9,7 +9,6 @@ import torch.optim as optim
 import torch.utils.data
 
 from models.GTN.GTN import GTN
-from models.GTN.GCN import GCN
 import utils.utils as utils
 from torch.utils.tensorboard import SummaryWriter
 
@@ -100,17 +99,10 @@ if __name__ == '__main__':
     optimizer_gtn = optim.Adam(model_gtn.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     model_gtn.to(device)
 
-    model_gcn = GCN(in_dim=1, hidden_dim=args.hidden, out_dim=1, dropout=args.dropout,
-                    num_GC_layers=args.num_gc_layers)
-    print(model_gcn.__repr__())
-    optimizer_gcn = optim.Adam(model_gcn.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    model_gcn.to(device)
-
     t_total = time.time()
     for epoch in range(args.epochs):
         num_iter = num_train // args.batch_size
         gtn_loss_train, gtn_rmse_train, gtn_mae_train = 0.0, 0.0, 0.0
-        gcn_loss_train, gcn_rmse_train, gcn_mae_train = 0.0, 0.0, 0.0
         for i, batch in enumerate(train_set):
             start = time.time()
             batch_g, batch_set = utils.sampling_neighbor(batch, G,
@@ -125,22 +117,17 @@ if __name__ == '__main__':
                                                                   model=model_gtn,
                                                                   device=device,
                                                                   optimizer=optimizer_gtn)
-            gcn_loss_train, gcn_rmse_train, gcn_mae_train = train(features=batch_features,
-                                                                  adj=batch_adj,
-                                                                  train_set=batch_set,
-                                                                  model=model_gcn,
-                                                                  device=device,
-                                                                  optimizer=optimizer_gcn)
-
         # Validate
         gtn_loss_val, gtn_rmse_val, gtn_mae_val = 0.0, 0.0, 0.0
-        gcn_loss_val, gcn_rmse_val, gcn_mae_val = 0.0, 0.0, 0.0
         for i, val_batch in enumerate(val_set):
             val_g, val_batch_set = utils.sampling_neighbor(val_batch, G, n_users)
             val_features, val_adj = utils.get_batches(val_g)
 
             gtn_loss_val, gtn_rmse_val, gtn_mae_val = test(val_features, val_adj, val_batch_set, model_gtn, device)
-            gcn_loss_val, gcn_rmse_val, gcn_mae_val = test(val_features, val_adj, val_batch_set, model_gcn, device)
+
+        print("Epoch: %d, loss_train: %.4f, RMSE_train: %.4f, MAE_train: %.4f, "
+              "loss_val: %.4f, RMSE_val: %.4f, MAE: %.4f"
+              % (epoch, gtn_loss_train, gtn_rmse_train, gtn_mae_train, gtn_loss_val, gtn_rmse_val, gtn_mae_val))
 
         writer.add_scalar('GTN/loss_train', gtn_loss_train, epoch)
         writer.add_scalar('GTN/rmse_train', gtn_rmse_train, epoch)
@@ -148,20 +135,12 @@ if __name__ == '__main__':
         writer.add_scalar('GTN/loss_val', gtn_loss_val, epoch)
         writer.add_scalar('GTN/rmse_val', gtn_rmse_val, epoch)
         writer.add_scalar('GTN/mae_val', gtn_mae_val, epoch)
-        writer.add_scalar('GCN/loss_train', gcn_loss_train, epoch)
-        writer.add_scalar('GCN/rmse_train', gcn_rmse_train, epoch)
-        writer.add_scalar('GCN/mae_train', gcn_mae_train, epoch)
-        writer.add_scalar('GCN/loss_val', gcn_loss_val, epoch)
-        writer.add_scalar('GCN/rmse_val', gcn_rmse_val, epoch)
-        writer.add_scalar('GCN/mae_val', gcn_mae_val, i + epoch)
 
         if epoch % 10 == 0:
             name = 'train/state_dict_' + str(epoch) + '_.pth'
 
             torch.save({
-                'GCN_state_dict': model_gcn.state_dict(),
                 'GTN_state_dict': model_gtn.state_dict(),
-                'optimizer_gcn': optimizer_gcn.state_dict(),
                 'optimizer_gtn': optimizer_gtn.state_dict(),
                 "epoch": epoch,
             }, name)
@@ -176,13 +155,9 @@ if __name__ == '__main__':
         test_features, test_adj = utils.get_batches(test_g)
 
         gtn_loss_test, gtn_rmse_test, gtn_mae_test = test(test_features, test_adj, test_batch_set, model_gtn, device)
-        gcn_loss_test, gcn_rmse_test, gcn_mae_test = test(test_features, test_adj, test_batch_set, model_gcn, device)
 
         writer.add_scalar("GTN/Loss_test", gtn_loss_test, i)
         writer.add_scalar("GTN/RMSE_test", gtn_rmse_test, i)
         writer.add_scalar("GTN/MAE_test", gtn_mae_test, i)
-        writer.add_scalar("GCN/Loss_test", gcn_loss_test, i)
-        writer.add_scalar("GCN/RMSE_test", gcn_rmse_test, i)
-        writer.add_scalar("GCN/MAE_test", gcn_mae_test, i)
 
     writer.close()

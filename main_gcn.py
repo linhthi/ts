@@ -117,7 +117,6 @@ if __name__ == '__main__':
                                                                   model=model_gcn,
                                                                   device=device,
                                                                   optimizer=optimizer_gcn)
-        print("Epoch: %d, Loss: %.4f, RMSE: %.4f, MAE: %.4f" %(epoch, gcn_loss_train, gcn_rmse_train, gcn_mae_train))
 
         # Validate
         gcn_loss_val, gcn_rmse_val, gcn_mae_val = 0.0, 0.0, 0.0
@@ -126,6 +125,10 @@ if __name__ == '__main__':
             val_features, val_adj = utils.get_batches(val_g)
 
             gcn_loss_val, gcn_rmse_val, gcn_mae_val = test(val_features, val_adj, val_batch_set, model_gcn, device)
+
+        print("Epoch: %d, Loss_train: %.4f, RMSE_train: %.4f, MAE_train: %.4f, "
+              "Loss_val: %.4f, RMSE_val: %.4f, MAE_val: %.4f"
+              % (epoch, gcn_loss_train, gcn_rmse_train, gcn_mae_train))
 
         writer.add_scalar('GCN/loss_train', gcn_loss_train, epoch)
         writer.add_scalar('GCN/rmse_train', gcn_rmse_train, epoch)
