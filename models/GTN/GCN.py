@@ -9,13 +9,13 @@ class GCN(nn.Module):
     Simple Graph Convolutional Networks for Node Embedding with 2 Graph Convolution layers
     """
 
-    def __init__(self, in_dim, hidden_dim, out_dim, num_GC_layers, dropout):
+    def __init__(self, in_dim, hidden_dim, out_dim, dropout, num_GC_layers=2):
         """
 
         @param in_dim: dimension of input features
         @param hidden_dim: dimension of hidden layer
         @param out_dim: dimension of output
-        @param num_GC_layers: number of Graph Convolution layers with value: 1 or 2
+        @param num_GC_layers: number of Graph Convolution layers with value: 1 or 2, default 2
         @param dropout: dropout layer
         """
         super(GCN, self).__init__()
