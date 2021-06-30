@@ -2,7 +2,6 @@ from __future__ import division, print_function
 
 import time
 import argparse
-import numpy as np
 
 import torch
 import torch.nn as nn
@@ -10,7 +9,6 @@ import torch.optim as optim
 import torch.utils.data
 
 from models.GTN.GCN import GCN
-from models.GTN.sampler import Sampler_GCN
 import utils.utils as utils
 from torch.utils.tensorboard import SummaryWriter
 
@@ -34,47 +32,42 @@ def get_args():
                         help='Dropout rate (1 - keep probability).')
     parser.add_argument('--dataset', default='ciao',
                         help='Dataset name')
-    parser.add_argument('--batch_size', default=32,
-                        help='Dataset name')
+    parser.add_argument('--batch_size', type=int, default=32,
+                        help='Batch size')
+    parser.add_argument('--num_neighbor', type=int, default=8)
+    parser.add_argument('--num_item_neighbor', type=int, default=4)
+    parser.add_argument('--num_gc_layers', type=int, default=1)
     args = parser.parse_args()
     print(args)
     return args
 
 
-def train(features, adj, train_set, val_set, fastmode, model, device):
-    t = time.time()
+def train(features, adj, train_set, model, device, optimizer):
     model.train()
     optimizer.zero_grad()
-    score = model(features, adj, train_set[:, 0:1].reshape(train_set.shape[0], ), train_set[:, 1:2].reshape(train_set.shape[0], ))
-    loss_train = criterion(score, train_set[:, 3:4].type(torch.FloatTensor).to(device))
+    features = features.to(device)
+    adj = adj.to(device)
+    score = model(features, adj, train_set[:, 0:1].reshape(train_set.shape[0], ),
+                  train_set[:, 1:2].reshape(train_set.shape[0], ))
+    loss_train = criterion(score, train_set[:, 2:3].type(torch.FloatTensor).to(device))
     rmse_train = torch.sqrt(loss_train)
-    mae_train = mae_loss(score, train_set[:, 3:4].type(torch.FloatTensor).to(device))
+    mae_train = mae_loss(score, train_set[:, 2:3].type(torch.FloatTensor).to(device))
     loss_train.backward()
     optimizer.step()
 
-    loss_val, rmse_val, mae_val = 0, 0, 0
-    if not fastmode:
-        # Evaluate validation set performance separately,
-        # deactivates dropout during validation run.
-        model.eval()
-        score = model(features, adj, val_set[:, 0:1].reshape(val_set.shape[0], ), val_set[:, 1:2].reshape(val_set.shape[0], ))
-        loss_val = criterion(score, val_set[:, 3:4].type(torch.FloatTensor).to(device))
-        rmse_val = torch.sqrt(loss_val)
-        mae_val = mae_loss(score, val_set[:, 3:4].type(torch.FloatTensor).to(device))
-    total_time = time.time() - t
-    return loss_train, loss_val, rmse_train, mae_train, rmse_val, mae_val, total_time
+    return loss_train, rmse_train, mae_train
 
 
 def test(features, adj_test, test_set, model, device):
     model.eval()
-    score = model(features, adj_test, test_set[:, 0:1].reshape(len(test_set), ), test_set[:, 1:2].reshape(len(test_set), ))
-    loss_test = criterion(score, test_set[:, 3:4].type(torch.FloatTensor).to(device))
+    features = features.to(device)
+    adj_test = adj_test.to(device)
+    score = model(features, adj_test, test_set[:, 0:1].reshape(len(test_set), ),
+                  test_set[:, 1:2].reshape(len(test_set), ))
+    loss_test = criterion(score, test_set[:, 2:3].type(torch.FloatTensor).to(device))
     rmse_test = torch.sqrt(loss_test)
-    mae_test = mae_loss(score, test_set[:, 3:4].type(torch.FloatTensor).to(device))
-    print("Test set results:",
-          "loss= {:.4f}".format(loss_test),
-          'rmse_test= {:.4f}'.format(rmse_test),
-          "mae_test= {:.4f}".format(mae_test))
+    mae_test = mae_loss(score, test_set[:, 2:3].type(torch.FloatTensor).to(device))
+    return loss_test, rmse_test, mae_test
 
 
 # Train model
@@ -89,50 +82,80 @@ if __name__ == '__main__':
     # Load data
     print("Loading data...")
 
-    adj, features, train_set, val_set, test_set, G, _ = utils.load_data(args.dataset)
-    features = torch.FloatTensor(features)
-    train_set = torch.LongTensor(train_set).to(device)
-    val_set = torch.LongTensor(val_set).to(device)
-    test_set = torch.LongTensor(test_set).to(device)
+    adj, features, train_set, val_set, test_set, G, n_users = utils.load_data(args.dataset)
+    features = torch.FloatTensor(features).to(device)
+    num_train = train_set.shape[0]
+    train_set = torch.utils.data.DataLoader(train_set, shuffle=True, batch_size=args.batch_size)
+    val_set = torch.utils.data.DataLoader(val_set, shuffle=True, batch_size=args.batch_size)
+    test_set = torch.utils.data.DataLoader(test_set, shuffle=True, batch_size=args.batch_size)
 
     # Model and optimizer
-    model = GCN(in_dim=1,
-                hidden_dim=args.hidden,
-                out_dim=1,
-                dropout=args.dropout)
-    print(model.__repr__())
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     criterion = nn.MSELoss()
     mae_loss = nn.L1Loss()
-    model.to(device)
+
+    model_gcn = GCN(in_dim=1, hidden_dim=args.hidden, out_dim=1, dropout=args.dropout,
+                    num_GC_layers=args.num_gc_layers)
+    print(model_gcn.__repr__())
+    optimizer_gcn = optim.Adam(model_gcn.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    model_gcn.to(device)
 
     t_total = time.time()
     for epoch in range(args.epochs):
-        loss_train, loss_val, rmse_train, mae_train, rmse_val, mae_val, tt_time = train(features=features,
-                                                                    adj=adj,
-                                                                    train_set=train_set,
-                                                                    val_set=val_set,
-                                                                    fastmode=args.fastmode,
-                                                                    # fastmode=True,
-                                                                    model=model,
-                                                                    device=device)
-        print("Epoch: {}".format(epoch),
-              "loss_train: {:.4f}".format(loss_train),
-              "loss_val: {:.4f}".format(loss_val),
-              "rmse_train: {:.4f}".format(rmse_train),
-              "mae_train: {:.4f}".format(mae_train),
-              "rmse_val:{:.4f}".format(rmse_val),
-              "mae_val:{:.4f}".format(mae_val),
-              "total_time: {} s".format(tt_time))
+        num_iter = num_train // args.batch_size
+        gcn_loss_train, gcn_rmse_train, gcn_mae_train = 0.0, 0.0, 0.0
+        for i, batch in enumerate(train_set):
+            start = time.time()
+            batch_g, batch_set = utils.sampling_neighbor(batch, G,
+                                                         n_users=n_users,
+                                                         num_neighbors=args.num_neighbor,
+                                                         num_items=args.num_item_neighbor)
+            batch_features, batch_adj = utils.get_batches(batch_g)
+
+            gcn_loss_train, gcn_rmse_train, gcn_mae_train = train(features=batch_features,
+                                                                  adj=batch_adj,
+                                                                  train_set=batch_set,
+                                                                  model=model_gcn,
+                                                                  device=device,
+                                                                  optimizer=optimizer_gcn)
+        print("Epoch: %d, Loss: %.4f, RMSE: %.4f, MAE: %.4f" %(epoch, gcn_loss_train, gcn_rmse_train, gcn_mae_train))
+
+        # Validate
+        gcn_loss_val, gcn_rmse_val, gcn_mae_val = 0.0, 0.0, 0.0
+        for i, val_batch in enumerate(val_set):
+            val_g, val_batch_set = utils.sampling_neighbor(val_batch, G, n_users)
+            val_features, val_adj = utils.get_batches(val_g)
+
+            gcn_loss_val, gcn_rmse_val, gcn_mae_val = test(val_features, val_adj, val_batch_set, model_gcn, device)
+
+        writer.add_scalar('GCN/loss_train', gcn_loss_train, epoch)
+        writer.add_scalar('GCN/rmse_train', gcn_rmse_train, epoch)
+        writer.add_scalar('GCN/mae_train', gcn_mae_train, epoch)
+        writer.add_scalar('GCN/loss_val', gcn_loss_val, epoch)
+        writer.add_scalar('GCN/rmse_val', gcn_rmse_val, epoch)
+        writer.add_scalar('GCN/mae_val', gcn_mae_val, i + epoch)
+
+        if epoch % 10 == 0:
+            name = 'train/state_dict_' + str(epoch) + '_.pth'
+
+            torch.save({
+                'GCN_state_dict': model_gcn.state_dict(),
+                'optimizer_gcn': optimizer_gcn.state_dict(),
+                "epoch": epoch,
+            }, name)
 
     print("Optimization Finished!")
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
     # Testing
     # TODO: add validation edges to predict test edges
-    test(
-        features=features,
-        adj_test=adj,
-        test_set=test_set,
-        model=model,
-        device=device)
+    for i, test_batch_set in enumerate(test_set):
+        test_g, test_batch_set = utils.sampling_neighbor(test_batch_set, G, n_users)
+        test_features, test_adj = utils.get_batches(test_g)
+
+        gcn_loss_test, gcn_rmse_test, gcn_mae_test = test(test_features, test_adj, test_batch_set, model_gcn, device)
+
+        writer.add_scalar("GCN/Loss_test", gcn_loss_test, i)
+        writer.add_scalar("GCN/RMSE_test", gcn_rmse_test, i)
+        writer.add_scalar("GCN/MAE_test", gcn_mae_test, i)
+
+    writer.close()
