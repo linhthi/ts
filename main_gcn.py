@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
         print("Epoch: %d, Loss_train: %.4f, RMSE_train: %.4f, MAE_train: %.4f, "
               "Loss_val: %.4f, RMSE_val: %.4f, MAE_val: %.4f"
-              % (epoch, gcn_loss_train, gcn_rmse_train, gcn_mae_train))
+              % (epoch, gcn_loss_train, gcn_rmse_train, gcn_mae_train, gcn_loss_val, gcn_rmse_val, gcn_mae_val))
 
         writer.add_scalar('GCN/loss_train', gcn_loss_train, epoch)
         writer.add_scalar('GCN/rmse_train', gcn_rmse_train, epoch)
