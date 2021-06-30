@@ -57,10 +57,10 @@ class PMF(object):
 
                 loss += self.lam_u * np.square(self.U[user]).sum() \
                         + self.lam_i * np.square(self.V[item]).sum()
-            loss = 0.5 * loss
+            loss = 0.5 * loss / len(train)
             rmse, mae = self.eval_metric(vali)
             epoch += 1
-            print('Epoch:%d loss:%.3f rmse:%.5f mae:%.5f' % (epoch, loss, rmse, mae))
+            print('Epoch:%d loss:%.5f rmse:%.5f mae:%.5f' % (epoch, loss, rmse, mae))
             if rmse < pre_rmse:
                 pre_rmse = rmse
                 endure_count = 0
