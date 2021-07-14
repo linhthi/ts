@@ -14,7 +14,7 @@ def split_rating_data(dataset):
     @param dataset: dataset's name. Ex: 'ciao'.
     @return: train, vali, test, n_user, n_items
     """
-    file_path = f'data/{dataset}/rating.csv'
+    file_path = f'{dataset}/rating.csv'
     df = pd.read_csv(file_path)
     df_values = df.values
 
@@ -33,7 +33,7 @@ def load_rating(dataset):
     @param dataset: dataset's name. Ex: 'ciao'.
     @return:
     """
-    file_path = f'data/{dataset}/rating.csv'
+    file_path = f'{dataset}/rating.csv'
     return pd.read_csv(file_path).values
 
 
@@ -43,7 +43,7 @@ def load_trust_network(dataset):
     @param dataset: dataset's name. Ex: 'ciao'
     return:
     """
-    file_path = f'data/{dataset}/trustnetwork.csv'
+    file_path = f'{dataset}/trustnetwork.csv'
     return pd.read_csv(file_path).values
 
 
@@ -79,7 +79,7 @@ def get_nodes(dataset):
     @param dataset: dataset's name
     @return: users, items type np.array
     """
-    file_path = f'data/{dataset}/rating.csv'
+    file_path = f'{dataset}/rating.csv'
     df = pd.read_csv(file_path)
     users = df['user_id'].unique()
     # items = df[['item_id', 'category_id']].drop_duplicates()
