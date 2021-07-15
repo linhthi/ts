@@ -137,14 +137,14 @@ if __name__ == '__main__':
         writer.add_scalar('GCN/rmse_val', gcn_rmse_val, epoch)
         writer.add_scalar('GCN/mae_val', gcn_mae_val, i + epoch)
 
-        if epoch % 10 == 0:
-            name = 'train/state_dict_' + str(epoch) + '_.pth'
-
-            torch.save({
-                'GCN_state_dict': model_gcn.state_dict(),
-                'optimizer_gcn': optimizer_gcn.state_dict(),
-                "epoch": epoch,
-            }, name)
+        # if epoch % 10 == 0:
+        #     name = 'train/state_dict_' + str(epoch) + '_.pth'
+        #
+        #     torch.save({
+        #         'GCN_state_dict': model_gcn.state_dict(),
+        #         'optimizer_gcn': optimizer_gcn.state_dict(),
+        #         "epoch": epoch,
+        #     }, name)
 
     print("Optimization Finished!")
     print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
